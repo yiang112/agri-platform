@@ -24,17 +24,22 @@ print(f"📊 成功读取到 {len(df)} 条数据")
 # pd.get_dummies 会自动把 'province' 列炸开，变成 'province_黑龙江', 'province_河南'...
 df_encoded = pd.get_dummies(df, columns=['province'])
 
-# 准备特征 (X) 和 目标 (y)
-# 我们要把无关的列删掉：id (没用), yield_amount (它是答案), create_time (如果有的话)
-# 剩下的 year, temperature, rainfall, soil_ph, soil_humidity 以及所有的 province_xxx 都是特征
-drop_columns = ['id', 'yield_amount', 'crop_type']
-# 如果数据库里有 record_date 或 create_time 也得删掉，防止报错
-for col in ['record_date', 'create_time', 'region']: # 为了保险，把 region 也加上
-    if col in df_encoded.columns:
-        drop_columns.append(col)
+# ... 之前连接数据库的代码不变 ...
 
-X = df_encoded.drop(drop_columns, axis=1, errors='ignore')
+# 提取特征和目标变量
+# 注意：我们要保留 crop_type，把 province 和 crop_type 都作为特征
+drop_columns = ['id', 'yield_amount', 'create_time'] # 删掉这里面的 crop_type（如果有的话）
+X_raw = df.drop(drop_columns, axis=1, errors='ignore')
 y = df['yield_amount']
+
+# 对省份和农作物都进行 One-Hot 编码
+X = pd.get_dummies(X_raw, columns=['province', 'crop_type'])
+
+# 保存特征列顺序
+import joblib
+joblib.dump(X.columns.tolist(), 'models/model_columns.pkl')
+
+# ... 后面的拆分数据集和 RandomForestRegressor 训练代码保持不变 ...
 
 print("🧠 特征处理完毕，训练所使用的特征列名如下：")
 print(list(X.columns))

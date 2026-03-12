@@ -17,7 +17,7 @@
           <span class="icon">🗄️</span> 数据可视与资产
         </div>
       </nav>
-      <div class="sidebar-footer"><p>专家系统 v12.0 热力图版</p></div>
+      <div class="sidebar-footer"><p>专家系统 v14.0 精准算力版</p></div>
     </aside>
 
     <main class="main-content">
@@ -37,27 +37,42 @@
             <div class="panel-title">🌾 全国产量热力态势</div>
             <div class="global-crop-selector" style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
               <span style="font-size: 13px; color: #7f8c8d; font-weight: bold;">当前分析品种:</span>
-              <select v-model="selectedCrop" class="modern-select" @change="initMapChart" style="min-width: 100px; padding: 6px 12px; font-size: 13px;">
+              <select v-model="selectedCrop" class="modern-select" @change="handleCropChange" style="min-width: 100px; padding: 6px 12px; font-size: 13px;">
                 <option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option>
               </select>
             </div>
             <div class="panel-data">
-              <div class="data-item"><span>已收录数据</span><strong>{{ allData.length }} <small>条</small></strong></div>
-              <div class="data-item"><span>覆盖省份</span><strong>{{ provinceList.length }} <small>个</small></strong></div>
+              <div class="data-item"><span>相关收录数据</span><strong>{{ currentCropData.length }} <small>条</small></strong></div>
+              <div class="data-item"><span>覆盖省份</span><strong>{{ currentCropProvinces }} <small>个</small></strong></div>
             </div>
-            <p class="hint">✨ 颜色越深代表产量越高，点击省份查收诊断报告</p>
+            <p class="hint">✨ 颜色越深代表产量越高，点击省份进行AI沙盘推演</p>
           </div>
         </div>
 
         <div v-else-if="currentView === 'dashboard'" class="dashboard-view">
-          <div class="stats-row">
-            <div class="stat-card hover-float"><div class="stat-icon bg-blue">📉</div><div class="stat-info"><h4>收录数据总量</h4><p class="number">{{ allData.length }} <span class="unit">条</span></p></div></div>
-            <div class="stat-card hover-float"><div class="stat-icon bg-green">🗺️</div><div class="stat-info"><h4>覆盖省份</h4><p class="number">{{ provinceList.length }} <span class="unit">个</span></p></div></div>
-            <div class="stat-card hover-float"><div class="stat-icon bg-purple">🌾</div><div class="stat-info"><h4>平均亩产</h4><p class="number">{{ averageYield }} <span class="unit">kg</span></p></div></div>
-            <div class="stat-card hover-float"><div class="stat-icon bg-orange">🏆</div><div class="stat-info"><h4>最高产省份</h4><p class="number text-sm">{{ topProvince }}</p></div></div>
+
+          <div class="control-panel card hover-glow" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; margin-bottom: 25px;">
+            <div class="panel-header" style="margin: 0; padding: 0; border: none;">
+              <h4 style="margin: 0; font-size: 18px; color: #1e293b;">🚀 全局核心指标与排行榜</h4>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">当前展示数据已自动过滤，仅包含针对【{{ selectedCrop }}】的精准测算</p>
+            </div>
+            <div class="global-crop-selector" style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 14px; font-weight: bold; color: #334155;">🎯 切换作物品类:</span>
+              <select v-model="selectedCrop" @change="handleCropChange" class="modern-select" style="border-color: #2ed573;">
+                <option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option>
+              </select>
+            </div>
           </div>
+
+          <div class="stats-row">
+            <div class="stat-card hover-float"><div class="stat-icon bg-blue">📉</div><div class="stat-info"><h4 style="font-size:13px;">{{ selectedCrop }} 数据总量</h4><p class="number">{{ currentCropData.length }} <span class="unit">条</span></p></div></div>
+            <div class="stat-card hover-float"><div class="stat-icon bg-green">🗺️</div><div class="stat-info"><h4 style="font-size:13px;">{{ selectedCrop }} 覆盖省份</h4><p class="number">{{ currentCropProvinces }} <span class="unit">个</span></p></div></div>
+            <div class="stat-card hover-float"><div class="stat-icon bg-purple">🌾</div><div class="stat-info"><h4 style="font-size:13px;">全国 {{ selectedCrop }} 均产</h4><p class="number">{{ averageYield }} <span class="unit">kg</span></p></div></div>
+            <div class="stat-card hover-float"><div class="stat-icon bg-orange">🏆</div><div class="stat-info"><h4 style="font-size:13px;">{{ selectedCrop }} 冠军省份</h4><p class="number text-sm">{{ topProvince }}</p></div></div>
+          </div>
+
           <div class="card chart-section hover-glow">
-            <div class="card-header"><h4>🏆 全国各省平均产量 TOP 10 排行榜</h4></div>
+            <div class="card-header"><h4>🏆 全国各省 【{{ selectedCrop }}】 平均产量 TOP 10 龙虎榜</h4></div>
             <div id="rankChart" style="width: 100%; height: 500px;"></div>
           </div>
         </div>
@@ -68,7 +83,6 @@
               <h4 style="margin: 0; font-size: 18px; color: #1e293b;">📅 省级年度多作物全景视窗</h4>
               <p style="margin: 6px 0 0 0; font-size: 13px; color: #64748b;">选择省份与年份，直观对比四大主粮作物的产能表现</p>
             </div>
-
             <div class="multi-selectors" style="display: flex; align-items: center; gap: 25px; margin: 0;">
               <div class="selector-group" style="display: flex; align-items: center; gap: 10px;">
                 <label style="margin:0; font-weight: bold; color: #334155;">📍 目标省份：</label>
@@ -114,13 +128,13 @@
       <div class="modal-container fade-up">
         <div class="modal-header">
           <div style="display: flex; align-items: center; gap: 20px;">
-            <h3>📍 {{ selectedProvince }} - 农业大数据 AI 诊断报告</h3>
+            <h3>📍 {{ selectedProvince }} - 农业大数据调度与决策指挥中心</h3>
             <div class="modal-quick-selectors">
               <span class="label">分析对象:</span>
               <select v-model="selectedCrop" class="modern-select sm" @change="executeModalAnalysis">
                 <option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option>
               </select>
-              <span class="label" style="margin-left: 10px;">年份:</span>
+              <span class="label" style="margin-left: 10px;">推演年份:</span>
               <select v-model="selectedYear" class="modern-select sm" @change="executeModalAnalysis">
                 <option v-for="year in yearList" :key="year" :value="year">{{ year }}</option>
               </select>
@@ -129,45 +143,56 @@
           <button class="close-btn" @click.stop="closeModal">×</button>
         </div>
 
-        <div class="modal-body">
+        <div class="modal-body" style="background: #f8fafc;">
           <div v-if="loading" class="skeleton-three-block">
             <div class="skeleton-col-left"><div class="skeleton-card shimmer" style="flex: 1;"></div><div class="skeleton-card shimmer" style="flex: 1;"></div></div>
             <div class="skeleton-col-right"><div class="skeleton-card shimmer" style="height: 100%;"></div></div>
           </div>
 
           <div v-else class="three-block-layout fade-in">
-            <div class="layout-left-col">
-              <div class="content-block card-inner hover-glow">
+            <div class="layout-left-col" style="width: 40%;">
+              <div class="content-block card-inner hover-glow" style="background: white;">
                 <div class="block-header">
                   <h4>{{ selectedYear === '2025 (AI预测)' ? '🛸 2025年 AI 预测产量' : `📊 ${selectedYear}年 实际产量复盘` }}</h4>
                   <button @click="executeModalAnalysis" class="btn-flat btn-xs pulse-on-hover">重新测算</button>
                 </div>
                 <div class="chart-wrapper"><div id="modalYieldChart" style="width: 100%; height: 260px;"></div></div>
               </div>
-              <div class="content-block card-inner hover-glow">
+              <div class="content-block card-inner hover-glow" style="background: white;">
                 <div class="block-header"><h4>📈 历史产量波动复盘</h4></div>
                 <div class="chart-wrapper"><div id="modalHistoryChart" style="width: 100%; height: 260px;"></div></div>
               </div>
             </div>
 
-            <div class="layout-right-col">
-              <div class="content-block advice-block card-inner hover-glow">
-                <div class="advice-header-zone">
+            <div class="layout-right-col" style="width: 60%;">
+              <div class="content-block advice-block card-inner hover-glow" style="background: white; border-top: 4px solid #2ed573;">
+                <div class="advice-header-zone" style="border-bottom: 1px solid #e2e8f0; margin-bottom: 15px; padding-bottom: 15px;">
                   <div class="health-badge-wrapper" :class="statusType">
                     <div class="health-score-ring"><span class="health-score">{{ healthScore }}</span><span class="health-unit">分</span></div>
-                    <div class="health-label">综合健康指数</div>
+                    <div class="health-label">综合安全指数</div>
                   </div>
                   <div class="advice-title-text">
-                    <h4>🧠 多维深度诊断报告</h4>
-                    <p>基于 {{ selectedYear }} 数据模型生成，从产能、气象、土壤多维度进行剖析评估。</p>
+                    <h4 style="font-size: 20px; font-weight: 900; color: #0f172a;">🧠 智能调度与多维决策指令</h4>
+                    <p style="font-size: 13px; color: #64748b; margin-top: 4px; line-height: 1.5;">
+                      系统已自动提取 {{ selectedProvince }} 近 10 年气象及土壤大数据，结合随机森林回归模型，为您生成以下针对 <strong>{{ selectedCrop }}</strong> 的专项行动部署方案。
+                    </p>
                   </div>
                 </div>
-                <div class="advice-scroll-box spacious-list">
+
+                <div class="advice-scroll-box spacious-list" style="padding-right: 10px;">
                   <div v-for="(item, index) in expertAdviceList" :key="index" :class="['advice-list-item', item.type]">
                     <div class="item-icon-wrapper"><span class="item-icon">{{ item.icon }}</span></div>
                     <div class="item-content">
-                      <div class="item-title">{{ item.title }}</div>
-                      <div class="item-desc">{{ item.content }}</div>
+                      <div class="item-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div class="item-title" style="margin: 0; font-size: 16px;">{{ item.title }}</div>
+                        <div class="item-tags" style="display: flex; gap: 5px;">
+                          <span v-for="tag in item.tags" :key="tag" class="tech-tag" :class="item.type">{{ tag }}</span>
+                        </div>
+                      </div>
+                      <div class="item-desc" v-html="item.content"></div>
+                      <div class="item-action" v-if="item.action" :class="item.type">
+                        <span class="action-icon">🎯 执行指令：</span>{{ item.action }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -210,7 +235,6 @@ const assetProvince = ref('黑龙江')
 const getYield = (d) => Number(d.yieldAmount || d.yield_amount || 0);
 const getCrop = (d) => d.cropType || d.crop_type || '';
 
-// 🌟 这里是核心的字典映射 🌟
 const provinceMap = {
   '北京': '北京市', '天津': '天津市', '上海': '上海市', '重庆': '重庆市', '河北': '河北省', '山西': '山西省', '辽宁': '辽宁省', '吉林': '吉林省', '黑龙江': '黑龙江省', '江苏': '江苏省', '浙江': '浙江省', '安徽': '安徽省', '福建': '福建省', '江西': '江西省', '山东': '山东省', '河南': '河南省', '湖北': '湖北省', '湖南': '湖南省', '广东': '广东省', '海南': '海南省', '四川': '四川省', '贵州': '贵州省', '云南': '云南省', '陕西': '陕西省', '甘肃': '甘肃省', '青海': '青海省', '台湾': '台湾省', '内蒙古': '内蒙古自治区', '广西': '广西壮族自治区', '西藏': '西藏自治区', '宁夏': '宁夏回族自治区', '新疆': '新疆维吾尔自治区', '香港': '香港特别行政区', '澳门': '澳门特别行政区'
 }
@@ -218,16 +242,50 @@ const reverseProvinceMap = Object.fromEntries(Object.entries(provinceMap).map(([
 
 const pageTitle = computed(() => ({ home: '', dashboard: '数据驾驶舱', asset: '数据可视与资产中心' }[currentView.value]))
 
+// 🔥 核心逻辑优化：提前过滤出当前选定农作物的专属数据 🔥
+const currentCropData = computed(() => {
+  if (!allData.value) return [];
+  return allData.value.filter(d => getCrop(d) === selectedCrop.value);
+})
+
+const currentCropProvinces = computed(() => {
+  const provs = new Set(currentCropData.value.map(d => d.province));
+  return provs.size;
+})
+
 const averageYield = computed(() => {
-  if (!allData.value || allData.value.length === 0) return 0;
-  const total = allData.value.reduce((a, c) => a + getYield(c), 0);
-  return (total / allData.value.length).toFixed(1);
+  const data = currentCropData.value;
+  if (data.length === 0) return 0;
+  const total = data.reduce((a, c) => a + getYield(c), 0);
+  return (total / data.length).toFixed(1);
 })
 
 const topProvince = computed(() => {
-  if (!allData.value || allData.value.length === 0) return '暂无';
-  return allData.value.reduce((p, c) => getYield(p) > getYield(c) ? p : c).province;
+  const data = currentCropData.value;
+  if (data.length === 0) return '暂无';
+  // 精准计算：找出当前选定作物，历史平均产量最高的省份
+  const provMap = {};
+  data.forEach(d => {
+    if(!provMap[d.province]) { provMap[d.province] = { sum: 0, count: 0 }; }
+    provMap[d.province].sum += getYield(d);
+    provMap[d.province].count += 1;
+  });
+  let maxAvg = -1; let topP = '暂无';
+  for (const p in provMap) {
+    const avg = provMap[p].sum / provMap[p].count;
+    if (avg > maxAvg) { maxAvg = avg; topP = p; }
+  }
+  return topP;
 })
+
+// 处理切换作物的事件
+const handleCropChange = () => {
+  if (currentView.value === 'dashboard') {
+    initRankChart();
+  } else if (currentView.value === 'home') {
+    initMapChart();
+  }
+}
 
 const fetchData = async () => {
   try {
@@ -264,32 +322,18 @@ const syncData = async () => {
 
 const renderAssetCharts = () => {
   if (!allData.value || allData.value.length === 0) return;
-
   const currentYearData = allData.value.filter(d => d.province === assetProvince.value && String(d.year) === String(assetYear.value));
-  const cropYields = cropList.value.map(crop => {
-    const record = currentYearData.find(d => getCrop(d) === crop);
-    return { name: crop, value: record ? getYield(record) : 0 };
-  });
+  const cropYields = cropList.value.map(crop => { const record = currentYearData.find(d => getCrop(d) === crop); return { name: crop, value: record ? getYield(record) : 0 }; });
 
   const barDom = document.getElementById('assetCropBarChart');
   if (barDom) {
-    echarts.dispose(barDom);
-    const barChart = echarts.init(barDom);
+    echarts.dispose(barDom); const barChart = echarts.init(barDom);
     barChart.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      grid: { left: '5%', right: '5%', bottom: '10%', top: '15%', containLabel: true },
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: '5%', right: '5%', bottom: '10%', top: '15%', containLabel: true },
       xAxis: { type: 'category', data: cropYields.map(d => d.name), axisLabel: { fontSize: 14, fontWeight: 'bold', color: '#475569' }, axisTick: { alignWithLabel: true } },
       yAxis: { type: 'value', name: '亩产(kg)', splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } } },
-      series: [{
-        name: '实际产量', type: 'bar', barWidth: '40%', data: cropYields.map(d => d.value),
-        itemStyle: {
-          borderRadius: [8, 8, 0, 0],
-          color: function(params) {
-            const colors = [['#00f2fe', '#4facfe'], ['#f6d365', '#fda085'], ['#a8ff78', '#78ffd6'], ['#e0c3fc', '#8ec5fc']];
-            const grad = colors[params.dataIndex % colors.length];
-            return new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: grad[1] }, { offset: 1, color: grad[0] }]);
-          }
-        },
+      series: [{ name: '实际产量', type: 'bar', barWidth: '40%', data: cropYields.map(d => d.value),
+        itemStyle: { borderRadius: [8, 8, 0, 0], color: function(params) { const colors = [['#00f2fe', '#4facfe'], ['#f6d365', '#fda085'], ['#a8ff78', '#78ffd6'], ['#e0c3fc', '#8ec5fc']]; const grad = colors[params.dataIndex % colors.length]; return new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: grad[1] }, { offset: 1, color: grad[0] }]); } },
         label: { show: true, position: 'top', color: '#475569', fontWeight: 'bold', formatter: '{c} kg' }
       }]
     });
@@ -299,23 +343,16 @@ const renderAssetCharts = () => {
   const years = [...historyYearList.value].sort((a,b) => a - b);
   const colorsArr = ['#1890ff', '#fa8c16', '#52c41a', '#9c27b0'];
   const seriesData = cropList.value.map((crop, index) => {
-    const dataPoints = years.map(y => {
-      const record = historyData.find(d => String(d.year) === String(y) && getCrop(d) === crop);
-      return record ? getYield(record) : 0;
-    });
+    const dataPoints = years.map(y => { const record = historyData.find(d => String(d.year) === String(y) && getCrop(d) === crop); return record ? getYield(record) : 0; });
     return { name: crop, type: 'line', smooth: true, symbolSize: 6, lineStyle: { width: 3 }, itemStyle: { color: colorsArr[index] }, data: dataPoints };
   });
 
   const lineDom = document.getElementById('assetCropLineChart');
   if (lineDom) {
-    echarts.dispose(lineDom);
-    const lineChart = echarts.init(lineDom);
+    echarts.dispose(lineDom); const lineChart = echarts.init(lineDom);
     lineChart.setOption({
-      tooltip: { trigger: 'axis' }, legend: { data: cropList.value, top: 0, textStyle: { color: '#64748b', fontWeight: 'bold' } },
-      grid: { left: '5%', right: '5%', bottom: '10%', top: '15%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: years.map(y => y + '年') },
-      yAxis: { type: 'value', name: '平均亩产(kg)', splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } } },
-      series: seriesData
+      tooltip: { trigger: 'axis' }, legend: { data: cropList.value, top: 0, textStyle: { color: '#64748b', fontWeight: 'bold' } }, grid: { left: '5%', right: '5%', bottom: '10%', top: '15%', containLabel: true },
+      xAxis: { type: 'category', boundaryGap: false, data: years.map(y => y + '年') }, yAxis: { type: 'value', name: '平均亩产(kg)', splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } } }, series: seriesData
     });
   }
 }
@@ -328,35 +365,135 @@ watch(currentView, (v) => {
   })
 })
 
+// 🔥 修复排行榜渲染：只统计当前选中的农作物 🔥
+const initRankChart = () => {
+  const chartDom = document.getElementById('rankChart'); if (!chartDom) return; echarts.dispose(chartDom); const myChart = echarts.init(chartDom)
+  const provMap = {};
+  // 核心！只拿当前品种的数据
+  currentCropData.value.forEach(d => {
+    if(!provMap[d.province]) provMap[d.province] = [];
+    provMap[d.province].push(getYield(d))
+  })
+
+  const categories = [], values = [];
+  for (const p in provMap) {
+    categories.push(p);
+    values.push((provMap[p].reduce((a,b)=>a+b,0) / provMap[p].length).toFixed(2))
+  }
+
+  const sorted = categories.map((c, i) => ({name: c, val: parseFloat(values[i])})).sort((a,b) => b.val - a.val).slice(0, 10)
+
+  // 动态选择柱状图渐变色 (水稻蓝，小麦黄，玉米绿，大豆紫)
+  let topColor = '#4facfe', bottomColor = '#00f2fe';
+  if(selectedCrop.value === '小麦') { topColor = '#fda085'; bottomColor = '#f6d365'; }
+  else if(selectedCrop.value === '玉米') { topColor = '#78ffd6'; bottomColor = '#a8ff78'; }
+  else if(selectedCrop.value === '大豆') { topColor = '#8ec5fc'; bottomColor = '#e0c3fc'; }
+
+  myChart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: {type: 'shadow'} }, grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
+    xAxis: { type: 'category', data: sorted.map(i => i.name), axisLabel: { interval:0, rotate: 30, fontWeight: 'bold' } },
+    yAxis: { type: 'value', name: '平均产量(kg)', splitLine:{lineStyle:{type:'dashed', color:'#eee'}} },
+    series: [{
+      type: 'bar', data: sorted.map(i => i.val), barWidth: '40%', showBackground: true, backgroundStyle: { color: 'rgba(200, 200, 200, 0.1)', borderRadius: [10, 10, 0, 0] },
+      itemStyle: {
+        borderRadius: [10, 10, 0, 0],
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: topColor }, { offset: 1, color: bottomColor }]),
+        shadowColor: 'rgba(0, 0, 0, 0.1)', shadowBlur: 10
+      },
+      label: { show: true, position: 'top', color: '#475569', fontWeight: 'bold' }
+    }]
+  })
+}
+
 const normalizeName = (name) => {
   if (!name) return ""; if (name.startsWith('内蒙古') || name.startsWith('黑龙江')) return name.substring(0, 3); return name.substring(0, 2)
 }
 
-const generateExpertAdvice = (val, prov, crop, isPrediction) => {
+const generateExpertAdvice = (val, prov, crop, isPrediction, historyData) => {
   const list = []; let baseScore = 0;
+
+  let avgYield = 0, avgRain = 0, avgTemp = 0;
+  if (historyData && historyData.length > 0) {
+    avgYield = historyData.reduce((a,b) => a + getYield(b), 0) / historyData.length;
+    avgRain = historyData.reduce((a,b) => a + (b.rainfall||0), 0) / historyData.length;
+    avgTemp = historyData.reduce((a,b) => a + (b.temperature||0), 0) / historyData.length;
+  }
+
   let thresholdS = 600; let thresholdA = 450;
   if (crop === '水稻') { thresholdS = 620; thresholdA = 550; } else if (crop === '玉米') { thresholdS = 520; thresholdA = 450; } else if (crop === '小麦') { thresholdS = 420; thresholdA = 350; } else if (crop === '大豆') { thresholdS = 220; thresholdA = 180; }
 
-  const timeContext = isPrediction ? '预计未来' : '当年实际';
-  const actionS = isPrediction ? '建议着手准备秋收农机跨区调度方案。' : '复盘结论：当年气候与田间管理完美，造就了丰收大年。';
-  const actionA = isPrediction ? '建议保持常规田间巡视频率，稳固当前长势。' : '复盘结论：当年稳产保供目标顺利完成。';
-  const actionC = isPrediction ? '请立即拉响防灾警报，排查环境胁迫因子。' : '复盘结论：当年受极端气候或病虫害严重影响，导致了大幅减产。';
+  const timeContext = isPrediction ? '预计' : '当年';
+
+  let diffStr = "";
+  if (avgYield > 0) {
+    const diff = ((val - avgYield) / avgYield * 100).toFixed(1);
+    diffStr = diff > 0 ? `较近10年均值跃升了 <strong style="color:#10b981;">${diff}%</strong>` : `较近10年均值下降了 <strong style="color:#ef4444;">${Math.abs(diff)}%</strong>`;
+  }
 
   if (val >= thresholdS) {
     baseScore = 92 + Math.floor(Math.random() * 8); statusType.value = 'success';
-    list.push({ type: 'success', icon: '🏆', title: `产能评估：S级 (${crop}大丰收)`, content: `数据测算显示，${timeContext}${crop}亩产达 ${val}kg，远超同品类历史均值线。${actionS}` })
+    list.push({
+      type: 'success', icon: '🎯', title: `全局战略：S级丰收响应`, tags: ['高优等级', '产能扩张'],
+      content: `大模型核算显示，${timeContext} ${crop} 亩产可达 ${val}kg，${diffStr}。指标模型呈完美抛物线。`,
+      action: isPrediction ? '立即通知农机合作社，提前规划秋收跨区作业路线；启动粮库通风烘干设备预热。' : '总结当年优秀农事经验，可作为高标准农田建设的标杆案例进行推广。'
+    });
   } else if (val >= thresholdA) {
     baseScore = 75 + Math.floor(Math.random() * 15); statusType.value = 'info';
-    list.push({ type: 'info', icon: '📊', title: `产能评估：A级 (${crop}平稳)`, content: `${timeContext}${crop}亩产为 ${val}kg，处于合理波动区间。${actionA}` })
+    list.push({
+      type: 'info', icon: '⚖️', title: `全局战略：A级稳产保供`, tags: ['常规管理', '稳健态势'],
+      content: `${timeContext} ${crop} 亩产锁定在 ${val}kg 左右，基本符合当地生态承载力，${diffStr}，总体盘面安全可控。`,
+      action: '无需非常规干预，严格执行《标准化种植手册》，保持当前的田间巡查频次。'
+    });
   } else {
     baseScore = 50 + Math.floor(Math.random() * 20); statusType.value = 'warning';
-    list.push({ type: 'warning', icon: '⚠️', title: `产能评估：C级 (${crop}减产预警)`, content: `【高危告警】${timeContext}${crop}亩产仅 ${val}kg，已跌破安全阈值！${actionC}` })
+    list.push({
+      type: 'warning', icon: '🚨', title: `全局战略：C级高危干预`, tags: ['红色预警', '紧急响应'],
+      content: `系统侦测到严重胁迫！${timeContext} ${crop} 亩产仅 ${val}kg，跌破生态警戒线，${diffStr}，将引发经济损失。`,
+      action: '【最高指令】启动防灾减灾应急预案！组织农技专家下沉一线，排查病虫害与气象致灾因子。'
+    });
   }
 
   let currentScore = 0; const interval = setInterval(() => { if(currentScore < baseScore) { currentScore += 2; healthScore.value = currentScore; } else { healthScore.value = baseScore; clearInterval(interval); } }, 20);
 
-  if (['新疆', '甘肃', '宁夏', '内蒙古'].includes(prov)) { list.push({ type: 'normal', icon: '💧', title: '水资源与墒情', content: '西北旱区蒸发量大，缺水是限制产量的首要因素，建议依托智能传感技术实施靶向滴灌。' }) } else if (['黑龙江', '吉林', '辽宁'].includes(prov)) { list.push({ type: 'normal', icon: '❄️', title: '气象灾害防控', content: '东北区域需高度关注积温不足与早霜冷害，使用植物生长调节剂提升抗逆性是关键。' }) } else if (['江苏', '浙江', '湖北', '湖南', '江西'].includes(prov)) { list.push({ type: 'normal', icon: '🌧️', title: '田间排涝除渍', content: '南方水系发达区域易受梅雨淹涝影响，必须保证“三沟”贯通，防范渍水烂根。' }) } else if (['河南', '山东', '河北'].includes(prov)) { list.push({ type: 'normal', icon: '🌪️', title: '干热风防御', content: '黄淮海平原在灌浆期易遭遇干热风突袭，需利用无人机“一喷三防”阻断高温逼熟。' }) }
-  list.push({ type: 'normal', icon: '🧪', title: `专属营养方案 (${crop})`, content: `根据测土配方数据库，种植 ${crop} 时需严格把控氮磷钾追肥比例，辅以微量元素方能实现稳产增效。` })
+  if (['新疆', '甘肃', '宁夏', '内蒙古'].includes(prov)) {
+    list.push({ type: 'normal', icon: '📡', title: '水文遥感调度', tags: ['水资源', '节水抗旱'],
+      content: `根据历史库，当地年均降水量仅为 ${avgRain.toFixed(0)}mm，蒸发系数极高，水分胁迫是绝对短板。`,
+      action: '全域开启地下墒情传感器，实施基于 ET0 模型的精准水肥一体化滴灌。'
+    });
+  } else if (['黑龙江', '吉林', '辽宁'].includes(prov)) {
+    list.push({ type: 'normal', icon: '🌡️', title: '积温与冷害防线', tags: ['防低温', '诱抗剂'],
+      content: `该区历年平均有效气温为 ${avgTemp.toFixed(1)}℃，高纬度冷涡频发，随时面临早霜及寡照风险。`,
+      action: '在关键孕穗期，通过无人机连片喷施芸苔素内酯或磷酸二氢钾，强制作物提升耐寒基因表达。'
+    });
+  } else if (['江苏', '浙江', '湖北', '湖南', '江西'].includes(prov)) {
+    list.push({ type: 'normal', icon: '🌧️', title: '流域排涝控制', tags: ['防渍水', '清沟理墒'],
+      content: `大数据显示该区平均降水高达 ${avgRain.toFixed(0)}mm，梅雨季极易诱发根系缺氧腐烂。`,
+      action: '命令各片区立即疏通三沟，启动泵站强排预案；同时密切监测高湿诱发的赤霉病爆发节点。'
+    });
+  } else if (['河南', '山东', '河北'].includes(prov)) {
+    list.push({ type: 'normal', icon: '🌪️', title: '气象灾害阻击', tags: ['干热风', '一喷三防'],
+      content: `华北黄淮区在灌浆期遭遇高温低湿的概率高达 65%，极易引发焚风效应导致逼熟减产。`,
+      action: '调集大型自走式喷雾机，严格落实“一喷三防”作业，阻断水分骤失，延长灌浆周期。'
+    });
+  }
+
+  list.push({ type: 'normal', icon: '🧪', title: `精准农业配方 (${crop})`, tags: ['测土配方', '底肥优化'],
+    content: `云端土壤 NPK 模型库分析，连续种植 ${crop} 会造成微量元素定向消耗及土壤板结。`,
+    action: '秋收后执行秸秆粉碎深翻还田；下一季播种前，依据 AI 生成的变量施肥处方图进行底肥作业。'
+  });
+
+  if (val < thresholdA) {
+    list.push({ type: 'normal', icon: '🛡️', title: '金融风控部署', tags: ['农业保险', '底线思维'],
+      content: `鉴于系统推演出的减产信号，传统经营模式难以覆盖生产成本。`,
+      action: '建议农业合作社立刻对接保险公司，补充购买“气象指数保险”和“收入保险”，锁定保本底线。'
+    });
+  } else {
+    list.push({ type: 'normal', icon: '📈', title: '大宗市场策略', tags: ['错峰上市', '价格博弈'],
+      content: `宏观数据预判该品种今年全国呈丰产态势，集中上市必将面临采购商压价。`,
+      action: '指令仓储中心启动烘干塔，将优质粮源入库封存，避开上市高峰期，等待期货价格回暖后溢价抛售。'
+    });
+  }
+
   expertAdviceList.value = list
 }
 
@@ -378,10 +515,10 @@ const executeModalAnalysis = async () => {
     setTimeout(async () => {
       loading.value = false; yieldValue.value = val;
       if (val === 0 && !isPrediction) {
-        expertAdviceList.value = [{ type: 'warning', icon: '❌', title: '数据缺失', content: `底层数据库中暂未收录该年份的真实产量数据，请在资产中心录入。` }];
+        expertAdviceList.value = [{ type: 'warning', icon: '❌', title: '异常：数据缺失', tags: ['系统提示'], content: `底层数据库中暂未收录 ${selectedYear.value} 年的真实产量数据。`, action: '请前往系统下方的资产中心手动录入原始台账。' }];
         healthScore.value = 0; statusType.value = 'warning';
       } else {
-        generateExpertAdvice(val, selectedProvince.value, selectedCrop.value, isPrediction)
+        generateExpertAdvice(val, selectedProvince.value, selectedCrop.value, isPrediction, historyData)
       }
       await nextTick(); setTimeout(() => { initGaugeChart('modalYieldChart'); initLineChart('modalHistoryChart', historyData); }, 50)
     }, 800)
@@ -415,62 +552,29 @@ const initLineChart = (id, data) => {
   })
 }
 
-const initRankChart = () => {
-  const chartDom = document.getElementById('rankChart'); if (!chartDom) return; echarts.dispose(chartDom); const myChart = echarts.init(chartDom)
-  const provMap = {}; allData.value.forEach(d => { if(!provMap[d.province]) provMap[d.province] = []; provMap[d.province].push(getYield(d)) })
-  const categories = [], values = []; for (const p in provMap) { categories.push(p); values.push((provMap[p].reduce((a,b)=>a+b,0) / provMap[p].length).toFixed(2)) }
-  const sorted = categories.map((c, i) => ({name: c, val: parseFloat(values[i])})).sort((a,b) => b.val - a.val).slice(0, 10)
-  myChart.setOption({
-    tooltip: { trigger: 'axis', axisPointer: {type: 'shadow'} }, grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'category', data: sorted.map(i => i.name), axisLabel: { interval:0, rotate: 30 } }, yAxis: { type: 'value', name: '平均产量(kg)', splitLine:{lineStyle:{type:'dashed', color:'#eee'}} },
-    series: [{ type: 'bar', data: sorted.map(i => i.val), barWidth: '40%', showBackground: true, backgroundStyle: { color: 'rgba(200, 200, 200, 0.1)', borderRadius: [10, 10, 0, 0] }, itemStyle: { borderRadius: [10, 10, 0, 0], color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: '#4facfe' }, { offset: 1, color: '#00f2fe' }]), shadowColor: 'rgba(79, 172, 254, 0.4)', shadowBlur: 10 } }]
-  })
-}
-
-// 🔥🔥🔥 核心修复：热力图映射处理全称与简称 🔥🔥🔥
 const initMapChart = () => {
   const dom = document.getElementById('chinaMapChart'); if (!dom) return; echarts.dispose(dom); const chart = echarts.init(dom)
-
-  const currentCropData = allData.value.filter(d => getCrop(d) === selectedCrop.value);
   const provYieldMap = {};
-  currentCropData.forEach(d => {
-    if(!provYieldMap[d.province]) { provYieldMap[d.province] = { sum: 0, count: 0 }; }
-    provYieldMap[d.province].sum += getYield(d);
-    provYieldMap[d.province].count += 1;
-  });
+  currentCropData.value.forEach(d => { if(!provYieldMap[d.province]) { provYieldMap[d.province] = { sum: 0, count: 0 }; } provYieldMap[d.province].sum += getYield(d); provYieldMap[d.province].count += 1; });
 
-  let maxVal = 100;
-  let minVal = 0;
-
-  // 关键点：mapData 里的 name 必须是地图上显示的全称（如“黑龙江省”），否则 ECharts 不认！
+  let maxVal = 100; let minVal = 0;
   const mapData = provinceList.value.map(dbName => {
-    let avgYield = 0;
-    if (provYieldMap[dbName]) {
-      avgYield = Math.round(provYieldMap[dbName].sum / provYieldMap[dbName].count);
-    }
-    return {
-      name: provinceMap[dbName] || dbName, // 转换为全称，如：黑龙江 -> 黑龙江省
-      value: avgYield,
-      shortName: dbName // 保留简称用于后续点击和 Tooltip 查找
-    };
+    let avgYield = 0; if (provYieldMap[dbName]) { avgYield = Math.round(provYieldMap[dbName].sum / provYieldMap[dbName].count); }
+    return { name: provinceMap[dbName] || dbName, value: avgYield, shortName: dbName };
   });
 
-  if (mapData.length > 0) {
-    const yields = mapData.map(item => item.value).filter(v => v > 0);
-    if (yields.length > 0) { maxVal = Math.max(...yields); minVal = Math.min(...yields); }
-  }
+  if (mapData.length > 0) { const yields = mapData.map(item => item.value).filter(v => v > 0); if (yields.length > 0) { maxVal = Math.max(...yields); minVal = Math.min(...yields); } }
 
   chart.setOption({
     backgroundColor: '#eef2f5',
     tooltip: {
       trigger: 'item', backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { color: '#333' },
       formatter: (params) => {
-        // 反向转换寻找简称，用于判断数据库里是否有该省
         const sName = params.data ? params.data.shortName : (reverseProvinceMap[params.name] || params.name);
         if (!provinceList.value.includes(sName)) return `<div style="color:#999">${params.name}</div><div style="font-size:12px;">暂无该作物数据</div>`;
         return `<div style="font-weight:bold;color:#1890ff;font-size:15px;border-bottom:1px solid #eee;padding-bottom:5px;margin-bottom:5px;">${params.name}</div>
                     <div style="color:#666;">${selectedCrop.value} 平均亩产: <span style="color:#2ed573;font-weight:bold;font-size:18px;">${params.value || 0}</span> kg</div>
-                    <div style="font-size:12px;color:#888;margin-top:8px;">👉 点击生成 AI 诊断报告</div>`;
+                    <div style="font-size:12px;color:#888;margin-top:8px;">👉 点击进行AI沙盘推演</div>`;
       }
     },
     visualMap: {
@@ -478,18 +582,12 @@ const initMapChart = () => {
       inRange: { color: ['#fef08a', '#bbf7d0', '#4ade80', '#16a34a', '#14532d'] },
       textStyle: { color: '#64748b', fontWeight: 'bold' }, backgroundColor: 'rgba(255,255,255,0.9)', padding: 10, borderRadius: 8, boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
     },
-    geo: {
-      map: 'china', roam: true, zoom: 1.2, top: 'center', label: { show: true, color: '#334155', fontSize: 10, fontWeight: 'bold' },
-      itemStyle: { borderColor: '#fff', borderWidth: 1, shadowColor: 'rgba(0, 0, 0, 0.15)', shadowBlur: 5, shadowOffsetX: 2, shadowOffsetY: 5 },
-      emphasis: { label:{ color: '#fff' }, itemStyle: { borderWidth: 0, shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.4)' } },
-      select: { label:{color:'#fff'}, itemStyle: { areaColor: '#ffa502', shadowBlur: 15, shadowColor: 'rgba(255, 165, 2, 0.6)' } }
-    },
+    geo: { map: 'china', roam: true, zoom: 1.2, top: 'center', label: { show: true, color: '#334155', fontSize: 10, fontWeight: 'bold' }, itemStyle: { borderColor: '#fff', borderWidth: 1, shadowColor: 'rgba(0, 0, 0, 0.15)', shadowBlur: 5, shadowOffsetX: 2, shadowOffsetY: 5 }, emphasis: { label:{ color: '#fff' }, itemStyle: { borderWidth: 0, shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.4)' } }, select: { label:{color:'#fff'}, itemStyle: { areaColor: '#ffa502', shadowBlur: 15, shadowColor: 'rgba(255, 165, 2, 0.6)' } } },
     series: [{ type: 'map', geoIndex: 0, data: mapData, selectedMode: 'single' }]
   })
 
   chart.off('click');
   chart.on('click', params => {
-    // 点击时获取省份简称
     const sName = params.data ? params.data.shortName : (reverseProvinceMap[params.name] || params.name);
     const found = provinceList.value.find(dbName => normalizeName(dbName) === normalizeName(sName));
     if (found) { selectedProvince.value = found; selectedYear.value = '2025 (AI预测)'; showModal.value = true; executeModalAnalysis(); }
@@ -527,7 +625,7 @@ html, body, #app { margin: 0 !important; padding: 0 !important; width: 100vw !im
 .content-body { flex: 1; overflow-y: auto; padding: 30px; }
 .content-body.no-padding { padding: 0; overflow: hidden; }
 
-/* === 仪表盘 === */
+/* === 数据驾驶舱 === */
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; margin-bottom: 30px; }
 .stat-card { background: white; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
 .stat-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
@@ -550,7 +648,7 @@ html, body, #app { margin: 0 !important; padding: 0 !important; width: 100vw !im
 
 /* === 弹窗与通用组件 === */
 .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-.modal-container { background: #f8fafc; width: 88%; height: 92%; max-width: 1400px; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden;}
+.modal-container { background: #f8fafc; width: 90%; height: 95%; max-width: 1500px; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden;}
 .modal-header { padding: 20px 35px; background: white; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; z-index: 10;}
 .modal-header h3 { font-weight: 800; color: #1e293b; font-size: 22px; margin: 0; }
 .modal-body { flex: 1; overflow-y: hidden; padding: 30px; }
@@ -558,17 +656,17 @@ html, body, #app { margin: 0 !important; padding: 0 !important; width: 100vw !im
 .modal-quick-selectors .label { font-size: 13px; color: #475569; margin-right: 8px; font-weight: bold; }
 
 .three-block-layout { display: flex; gap: 30px; height: 100%; min-height: 500px;}
-.layout-left-col { width: 45%; display: flex; flex-direction: column; gap: 25px; }
-.layout-right-col { width: 55%; display: flex; flex-direction: column; height: 100%; }
-.content-block { background: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 20px; }
+.layout-left-col { display: flex; flex-direction: column; gap: 25px; }
+.layout-right-col { display: flex; flex-direction: column; height: 100%; }
+.content-block { border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 20px; }
 .layout-left-col .content-block { flex: 1; }
 .advice-block { flex: 1; overflow: hidden; padding: 30px; }
 .block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.03); padding-bottom: 10px;}
 .block-header h4 { font-size: 16px; font-weight: 700; color: #334155; margin: 0;}
 .chart-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
 
-/* 勋章化与列表 */
-.advice-header-zone { display: flex; align-items: center; gap: 25px; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px dashed #cbd5e1; flex-shrink: 0; }
+/* === 智能决策指令 UI 设计 === */
+.advice-header-zone { display: flex; align-items: center; gap: 25px; margin-bottom: 20px; padding-bottom: 20px; flex-shrink: 0; }
 .health-badge-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 110px; height: 110px; border-radius: 50%; padding: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); position: relative; flex-shrink: 0;}
 .health-badge-wrapper.success { background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%); box-shadow: 0 10px 25px rgba(120, 255, 214, 0.4); }
 .health-badge-wrapper.info { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); box-shadow: 0 10px 25px rgba(102, 166, 255, 0.4); }
@@ -577,27 +675,37 @@ html, body, #app { margin: 0 !important; padding: 0 !important; width: 100vw !im
 .health-score { font-size: 38px; font-weight: 900; color: #1e293b; line-height: 1; }
 .health-unit { font-size: 13px; color: #64748b; margin-top: 2px; }
 .health-label { position: absolute; bottom: -14px; background: #1e293b; color: white; font-size: 12px; padding: 4px 12px; border-radius: 12px; white-space: nowrap; font-weight: bold; }
-.advice-title-text h4 { font-size: 22px; color: #0f172a; margin-bottom: 10px; font-weight: 800; }
-.advice-title-text p { font-size: 14px; color: #64748b; line-height: 1.6; margin: 0; }
+
 .spacious-list { display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; padding-right: 15px; padding-bottom: 20px;}
 .spacious-list::-webkit-scrollbar { width: 6px; }
 .spacious-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.advice-list-item { display: flex; gap: 18px; padding: 18px; border-radius: 14px; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); border: 1px solid transparent; position: relative; overflow: hidden; flex-shrink: 0;}
-.advice-list-item:hover { transform: translateX(8px); box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
 
-.advice-list-item.success { background: linear-gradient(90deg, rgba(46,213,115,0.08), rgba(46,213,115,0.01)); border-color: rgba(46,213,115,0.2); }
-.advice-list-item.success .item-icon-wrapper { background: rgba(46,213,115,0.15); color: #27ae60; }
-.advice-list-item.info { background: linear-gradient(90deg, rgba(24,144,255,0.08), rgba(24,144,255,0.01)); border-color: rgba(24,144,255,0.2); }
-.advice-list-item.info .item-icon-wrapper { background: rgba(24,144,255,0.15); color: #0984e3; }
-.advice-list-item.warning { background: linear-gradient(90deg, rgba(255,165,2,0.08), rgba(255,165,2,0.01)); border-color: rgba(255,165,2,0.2); }
-.advice-list-item.warning .item-icon-wrapper { background: rgba(255,165,2,0.15); color: #e17055; }
-.advice-list-item.normal { background: linear-gradient(90deg, rgba(112,161,255,0.06), rgba(112,161,255,0.01)); border-color: rgba(112,161,255,0.15); }
-.advice-list-item.normal .item-icon-wrapper { background: rgba(112,161,255,0.12); color: #3742fa; }
+/* 强化版卡片设计 */
+.advice-list-item { display: flex; gap: 20px; padding: 20px; border-radius: 14px; transition: all 0.3s; border: 1px solid #e2e8f0; background: #fff; position: relative; overflow: hidden; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);}
+.advice-list-item:hover { transform: translateX(8px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); border-color: #cbd5e1;}
+.advice-list-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
+.advice-list-item.success::before { background: #10b981; }
+.advice-list-item.info::before { background: #3b82f6; }
+.advice-list-item.warning::before { background: #ef4444; }
+.advice-list-item.normal::before { background: #6366f1; }
 
-.item-icon-wrapper { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+.item-icon-wrapper { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; background: #f8fafc; border: 1px solid #f1f5f9; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);}
 .item-content { flex: 1; display: flex; flex-direction: column; justify-content: center;}
-.item-title { font-weight: 800; font-size: 16px; color: #1e293b; margin-bottom: 6px; }
-.item-desc { font-size: 14px; color: #475569; line-height: 1.6; margin: 0; word-break: break-word; }
+.tech-tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+.tech-tag.success { background: #d1fae5; color: #047857; }
+.tech-tag.info { background: #dbeafe; color: #1d4ed8; }
+.tech-tag.warning { background: #fee2e2; color: #b91c1c; }
+.tech-tag.normal { background: #f1f5f9; color: #475569; }
+
+.item-desc { font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 10px 0; word-break: break-word; }
+
+/* 决策指令框 */
+.item-action { font-size: 13.5px; padding: 10px 15px; border-radius: 8px; font-weight: 500; display: flex; align-items: flex-start; line-height: 1.5;}
+.action-icon { font-weight: 800; margin-right: 5px; flex-shrink: 0;}
+.item-action.success { background: #ecfdf5; color: #065f46; border-left: 3px solid #10b981;}
+.item-action.info { background: #eff6ff; color: #1e40af; border-left: 3px solid #3b82f6;}
+.item-action.warning { background: #fef2f2; color: #991b1b; border-left: 3px solid #ef4444;}
+.item-action.normal { background: #f8fafc; color: #334155; border-left: 3px solid #64748b;}
 
 /* 控件 */
 .btn-flat { background: #2ed573; color: white; border: none; padding: 10px 22px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: 700; font-size: 14px; box-shadow: 0 4px 12px rgba(46,213,115,0.3);}

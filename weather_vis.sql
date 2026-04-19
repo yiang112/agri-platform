@@ -80,3 +80,39 @@ ALTER TABLE agriculture_data
     ADD COLUMN phosphorus DOUBLE DEFAULT 30.0,
     ADD COLUMN potassium DOUBLE DEFAULT 20.0,
     ADD COLUMN create_time DATETIME DEFAULT CURRENT_TIMESTAMP;
+-- 1. 创建用户表
+CREATE TABLE `sys_user` (
+                            `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                            `username` varchar(64) NOT NULL COMMENT '登录账号',
+                            `password` varchar(128) NOT NULL COMMENT '登录密码',
+                            `real_name` varchar(64) DEFAULT NULL COMMENT '真实姓名或单位名称',
+                            `role_code` varchar(32) NOT NULL DEFAULT 'user' COMMENT '角色: admin 或 user',
+                            `status` int DEFAULT '1' COMMENT '状态: 1正常 0冻结',
+                            PRIMARY KEY (`id`),
+                            UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统授权用户表';
+
+-- 2. 插入初始化账号 (密码明文为123456)
+INSERT INTO `sys_user` (`username`, `password`, `real_name`, `role_code`, `status`) VALUES
+                                                                                        ('admin', '123456', '超级管理员', 'admin', 1),
+                                                                                        ('user1', '123456', '红星农业合作社', 'user', 1);
+
+-- 如果之前建表失败有残留，先删掉它
+DROP TABLE IF EXISTS `sys_user`;
+
+-- 1. 创建用户表（一定要从 CREATE 开始复制）
+CREATE TABLE `sys_user` (
+                            `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                            `username` varchar(64) NOT NULL COMMENT '登录账号',
+                            `password` varchar(128) NOT NULL COMMENT '登录密码',
+                            `real_name` varchar(64) DEFAULT NULL COMMENT '真实姓名或单位名称',
+                            `role_code` varchar(32) NOT NULL DEFAULT 'user' COMMENT '角色: admin 或 user',
+                            `status` int DEFAULT '1' COMMENT '状态: 1正常 0冻结',
+                            PRIMARY KEY (`id`),
+                            UNIQUE KEY `uk_username` (`username`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统授权用户表';
+
+-- 2. 插入初始化测试账号
+INSERT INTO `sys_user` (`username`, `password`, `real_name`, `role_code`, `status`) VALUES
+                                                                                        ('admin', '123456', '超级管理员', 'admin', 1),
+                                                                                        ('user1', '123456', '红星农业合作社', 'user', 1);

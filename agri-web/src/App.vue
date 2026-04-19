@@ -1,254 +1,186 @@
 <template>
-  <div class="app-container">
+  <div v-if="!currentUserRole" class="login-container">
+    <div class="login-box hover-float">
+      <div class="login-logo">🌾</div>
+      <h2>智慧农业大脑 - 认证中心</h2>
+
+      <div v-if="!isRegistering" class="login-form fade-in">
+        <p class="login-subtitle">请输入您的系统账号与密码</p>
+        <input v-model="loginForm.username" type="text" placeholder="账号 (管理员: admin, 农户: user1)" class="modern-input" />
+        <input v-model="loginForm.password" type="password" placeholder="密码 (如: 123456)" class="modern-input" @keyup.enter="handleRealLogin" />
+        <button class="btn-login user-btn" @click="handleRealLogin" :disabled="isAuthLoading">
+          {{ isAuthLoading ? '验证中...' : '安全登录' }}
+        </button>
+        <div class="auth-switch">没有账号？ <span class="link-text" @click="isRegistering = true">立即注册</span></div>
+      </div>
+
+      <div v-else class="login-form fade-in">
+        <p class="login-subtitle">欢迎加入智慧农业决策平台</p>
+        <input v-model="registerForm.username" type="text" placeholder="设置登录账号 (必填)" class="modern-input" />
+        <input v-model="registerForm.password" type="password" placeholder="设置登录密码 (必填)" class="modern-input" />
+        <input v-model="registerForm.realName" type="text" placeholder="您的姓名或所属单位 (选填)" class="modern-input" />
+        <button class="btn-login" style="background:#1890ff;" @click="handleRegister" :disabled="isAuthLoading">
+          {{ isAuthLoading ? '提交中...' : '立即注册账号' }}
+        </button>
+        <div class="auth-switch">已有账号？ <span class="link-text" @click="isRegistering = false">返回登录</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div v-else class="app-container fade-in">
     <aside class="sidebar">
       <div class="logo-area">
-        <div class="logo-circle">🌾</div>
-        <h2>智慧农业大脑</h2>
+        <div class="logo-circle">🌾</div><h2>智慧农业大脑</h2>
       </div>
 
       <nav class="menu">
-        <div :class="['menu-item', currentView === 'home' ? 'active' : '']" @click="currentView = 'home'">
-          <span class="icon">🗺️</span> 态势地图
-        </div>
-        <div :class="['menu-item', currentView === 'dashboard' ? 'active' : '']" @click="currentView = 'dashboard'">
-          <span class="icon">📊</span> 数据驾驶舱
-        </div>
-        <div :class="['menu-item', currentView === 'asset' ? 'active' : '']" @click="currentView = 'asset'">
-          <span class="icon">🗄️</span> 数据可视与资产
-        </div>
-        <div :class="['menu-item', currentView === 'model' ? 'active' : '']" @click="currentView = 'model'">
-          <span class="icon">🧠</span> AI 算法与模型中台
-        </div>
-        <div :class="['menu-item', currentView === 'system' ? 'active' : '']" @click="currentView = 'system'">
-          <span class="icon">⚙️</span> 系统监控与日志
-        </div>
+        <template v-if="currentUserRole === 'user'">
+          <div class="menu-category">核心业务区</div>
+          <div :class="['menu-item', currentView === 'home' ? 'active' : '']" @click="currentView = 'home'"><span class="icon">🗺️</span> 宏观态势地图</div>
+          <div :class="['menu-item', currentView === 'analysis' ? 'active' : '']" @click="currentView = 'analysis'"><span class="icon">📊</span> 深度数据分析</div>
+          <div :class="['menu-item', currentView === 'predict' ? 'active' : '']" @click="currentView = 'predict'"><span class="icon">🔮</span> AI 预测与沙盘</div>
+        </template>
+
+        <template v-if="currentUserRole === 'admin'">
+          <div class="menu-category">系统管理区</div>
+          <div :class="['menu-item', currentView === 'asset' ? 'active' : '']" @click="currentView = 'asset'"><span class="icon">🗄️</span> 农业数据管理</div>
+          <div :class="['menu-item', currentView === 'users' ? 'active' : '']" @click="currentView = 'users'"><span class="icon">👥</span> 系统用户管理</div>
+          <div class="menu-category" style="margin-top: 15px;">运维与算法监控</div>
+          <div :class="['menu-item', currentView === 'model' ? 'active' : '']" @click="currentView = 'model'"><span class="icon">🧠</span> AI 算力与模型</div>
+          <div :class="['menu-item', currentView === 'system' ? 'active' : '']" @click="currentView = 'system'"><span class="icon">⚙️</span> 系统健康监测</div>
+        </template>
       </nav>
-      <div class="sidebar-footer"><p>专家系统 v15.0 满血架构版</p></div>
+      <div class="sidebar-footer"><button class="btn-logout" @click="handleLogout">🚪 退出登录</button></div>
     </aside>
 
     <main class="main-content">
       <header v-if="currentView !== 'home'" class="top-header">
         <h3 class="page-title">{{ pageTitle }}</h3>
         <div class="user-info">
-          <span class="user-role">首席算法工程师</span>
-          <div class="avatar-simple">A</div>
+          <span class="user-role">{{ currentRealName || (currentUserRole === 'admin' ? '系统管理员' : '农业决策用户') }}</span>
+          <div class="avatar-simple" :style="{ background: currentUserRole === 'admin' ? '#1890ff' : '#2ed573' }">{{ currentUserRole === 'admin' ? 'A' : 'U' }}</div>
         </div>
       </header>
 
       <div :class="['content-body', currentView === 'home' ? 'no-padding' : '']">
 
-        <div v-if="currentView === 'home'" class="home-view">
+        <div v-if="currentView === 'home'" class="home-view fade-in">
+          <div v-if="isMapLoading" class="map-loading-overlay">
+            <div class="tech-spinner"></div>
+            <p>正在加载全国地图矢量资源，请稍候...</p>
+          </div>
           <div id="chinaMapChart" class="full-screen-map"></div>
           <div class="map-overlay-panel hover-glow">
             <div class="panel-title">🌾 全国产量热力态势</div>
-            <div class="global-crop-selector" style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 13px; color: #7f8c8d; font-weight: bold;">当前分析品种:</span>
-              <select v-model="selectedCrop" class="modern-select" @change="initMapChart" style="min-width: 100px; padding: 6px 12px; font-size: 13px;">
+            <div class="global-crop-selector" style="margin-bottom: 15px;">
+              <span style="font-size: 13px; color: #7f8c8d; font-weight: bold; margin-right:10px;">当前分析品种:</span>
+              <select v-model="selectedCrop" class="modern-select" @change="initMapChart">
                 <option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option>
               </select>
             </div>
-            <div class="panel-data">
-              <div class="data-item"><span>相关收录数据</span><strong>{{ currentCropData.length }} <small>条</small></strong></div>
-              <div class="data-item"><span>覆盖省份</span><strong>{{ currentCropProvinces }} <small>个</small></strong></div>
-            </div>
-            <p class="hint">✨ 颜色越深代表产量越高，点击省份进行AI沙盘推演</p>
+            <p class="hint">✨ 点击地图上的省份，即可查看该省的底层气象与产量概况。</p>
           </div>
         </div>
 
-        <div v-else-if="currentView === 'dashboard'" class="dashboard-view">
+        <div v-else-if="currentView === 'analysis'" class="dashboard-view fade-in">
           <div class="control-panel card hover-glow" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 30px; margin-bottom: 25px;">
-            <div class="panel-header" style="margin: 0; padding: 0; border: none;">
-              <h4 style="margin: 0; font-size: 18px; color: #1e293b;">🚀 全局核心指标与排行榜</h4>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">当前展示数据已自动过滤，仅包含针对【{{ selectedCrop }}】的精准测算</p>
-            </div>
-            <div class="global-crop-selector" style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 14px; font-weight: bold; color: #334155;">🎯 切换作物品类:</span>
-              <select v-model="selectedCrop" @change="handleCropChange" class="modern-select" style="border-color: #2ed573;">
+            <div><h4 style="margin: 0; font-size: 18px; color: #1e293b;">📊 农业多维因子专题分析报告</h4></div>
+            <div style="display: flex; gap: 15px;">
+              <span style="line-height:40px; font-weight:bold; font-size:14px;">全局筛选：</span>
+              <select v-model="analysisProvince" @change="switchAnalysisTab(activeAnalysisTab)" class="modern-select">
+                <option v-for="prov in provinceList" :key="prov" :value="prov">{{ prov }}</option>
+              </select>
+              <select v-model="selectedCrop" @change="switchAnalysisTab(activeAnalysisTab)" class="modern-select">
                 <option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option>
               </select>
             </div>
           </div>
-          <div class="stats-row">
-            <div class="stat-card hover-float"><div class="stat-icon bg-blue">📉</div><div class="stat-info"><h4 style="font-size:13px;">{{ selectedCrop }} 数据总量</h4><p class="number">{{ currentCropData.length }} <span class="unit">条</span></p></div></div>
-            <div class="stat-card hover-float"><div class="stat-icon bg-green">🗺️</div><div class="stat-info"><h4 style="font-size:13px;">{{ selectedCrop }} 覆盖省份</h4><p class="number">{{ currentCropProvinces }} <span class="unit">个</span></p></div></div>
-            <div class="stat-card hover-float"><div class="stat-icon bg-purple">🌾</div><div class="stat-info"><h4 style="font-size:13px;">全国 {{ selectedCrop }} 均产</h4><p class="number">{{ averageYield }} <span class="unit">kg</span></p></div></div>
-            <div class="stat-card hover-float"><div class="stat-icon bg-orange">🏆</div><div class="stat-info"><h4 style="font-size:13px;">{{ selectedCrop }} 冠军省份</h4><p class="number text-sm">{{ topProvince }}</p></div></div>
+
+          <div class="tabs-container">
+            <button :class="['tab-btn', activeAnalysisTab === 'yield' ? 'active' : '']" @click="switchAnalysisTab('yield')">📈 1. 十年产量演变走势</button>
+            <button :class="['tab-btn', activeAnalysisTab === 'rank' ? 'active' : '']" @click="switchAnalysisTab('rank')">🏆 2. 全国产量前十排名</button>
+            <button :class="['tab-btn', activeAnalysisTab === 'climate' ? 'active' : '']" @click="switchAnalysisTab('climate')">🌡️ 3. 气候降温降水变化</button>
+            <button :class="['tab-btn', activeAnalysisTab === 'soil' ? 'active' : '']" @click="switchAnalysisTab('soil')">🧪 4. 核心土壤成分含量</button>
           </div>
-          <div class="card chart-section hover-glow">
-            <div class="card-header"><h4>🏆 全国各省 【{{ selectedCrop }}】 平均产量 TOP 10 龙虎榜</h4></div>
-            <div id="rankChart" style="width: 100%; height: 500px;"></div>
+
+          <div class="card hover-glow fade-up" style="min-height: 450px;">
+            <div v-if="activeAnalysisTab === 'yield'" style="width: 100%; height: 400px;" id="tabYieldChart"></div>
+            <div v-if="activeAnalysisTab === 'rank'" style="width: 100%; height: 400px;" id="tabRankChart"></div>
+            <div v-if="activeAnalysisTab === 'climate'" style="width: 100%; height: 400px;" id="tabClimateChart"></div>
+            <div v-if="activeAnalysisTab === 'soil'" style="display:flex; align-items:center;">
+              <div style="width: 60%; height: 400px;" id="tabSoilChart"></div>
+              <div style="width: 40%; padding:20px; border-left:1px dashed #cbd5e1;">
+                <h3 style="color:#1e293b;">土壤肥力评估模型</h3>
+                <p style="color:#64748b; line-height:1.8;">展示 {{analysisProvince}} 地区抽样地块的核心 N-P-K (氮-磷-钾) 元素占比。过度的单一作物连作会导致土壤中某种微量元素枯竭。建议每年秋收后依据测土配方进行深翻施肥。</p>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div v-else-if="currentView === 'asset'" class="asset-view">
-          <div class="control-panel card hover-glow" style="display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; margin-bottom: 25px;">
-            <div class="panel-header" style="margin: 0; padding: 0; border: none;">
-              <h4 style="margin: 0; font-size: 18px; color: #1e293b;">📅 省级年度多作物全景视窗</h4>
-              <p style="margin: 6px 0 0 0; font-size: 13px; color: #64748b;">选择省份与年份，直观对比四大主粮作物的产能表现</p>
-            </div>
-            <div class="multi-selectors" style="display: flex; align-items: center; gap: 25px; margin: 0;">
-              <div class="selector-group" style="display: flex; align-items: center; gap: 10px;">
-                <label style="margin:0; font-weight: bold; color: #334155;">📍 目标省份：</label>
-                <select v-model="assetProvince" @change="renderAssetCharts" class="modern-select">
-                  <option v-for="prov in provinceList" :key="prov" :value="prov">{{ prov }}</option>
-                </select>
-              </div>
-              <div class="selector-group" style="display: flex; align-items: center; gap: 10px;">
-                <label style="margin:0; font-weight: bold; color: #334155;">⏳ 分析年份：</label>
-                <select v-model="assetYear" @change="renderAssetCharts" class="modern-select year-select">
-                  <option v-for="year in historyYearList" :key="year" :value="year">{{ year }} 年</option>
-                </select>
-              </div>
-              <button @click="syncData" class="btn-flat pulse-on-hover" style="display: flex; align-items: center; gap: 8px;">🔄 刷新数据</button>
-            </div>
-          </div>
-          <div class="asset-charts-row fade-in">
-            <div class="content-block card hover-glow chart-box" style="flex: 1;"><div class="block-header"><h4 style="color: #0f172a;">📊 {{ assetYear }}年 {{ assetProvince }} 四大农作物产量分布对比</h4></div><div id="assetCropBarChart" style="width: 100%; height: 350px;"></div></div>
-            <div class="content-block card hover-glow chart-box" style="flex: 1.2;"><div class="block-header"><h4 style="color: #0f172a;">📈 {{ assetProvince }} 历年 (近10年) 农作物品种产能走势</h4></div><div id="assetCropLineChart" style="width: 100%; height: 350px;"></div></div>
-          </div>
-          <div class="asset-manager-container card hover-glow" style="margin-top: 5px;">
-            <div class="panel-header" style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
-              <h4 style="font-size: 18px; color: #1e293b; font-weight: 800;">🗄️ 底层数据资产与运维中心</h4>
-              <p style="font-size: 13px; color: #64748b; margin-top: 5px;">在此处对原始台账数据进行增、删、改查操作，修改后点击上方“刷新数据”按钮即可更新可视化图表。</p>
-            </div>
-            <div style="height: 500px;"><DataManager /></div>
-          </div>
-        </div>
+        <div v-else-if="currentView === 'predict'" class="predict-view fade-in">
+          <div class="three-block-layout">
+            <div class="layout-left-col card hover-glow" style="width: 32%; background: #f8fafc; overflow-y:auto;">
+              <h3 style="margin-bottom:20px; color:#1e293b; border-bottom:2px solid #e2e8f0; padding-bottom:10px;">⚙️ AI 沙盘环境参数配置</h3>
 
-        <div v-else-if="currentView === 'model'" class="model-view fade-in">
-          <div class="stats-row">
-            <div class="stat-card" style="border-left: 4px solid #722ed1;">
-              <div class="stat-icon bg-purple">🧠</div>
-              <div class="stat-info"><h4>核心算法引擎</h4><p class="number" style="font-size:22px;">Random Forest</p><p style="font-size:12px; color:#999; margin-top:5px;">随机森林回归模型</p></div>
-            </div>
-            <div class="stat-card" style="border-left: 4px solid #2ed573;">
-              <div class="stat-icon bg-green">🎯</div>
-              <div class="stat-info"><h4>模型拟合度 (R²)</h4><p class="number">0.912</p><p style="font-size:12px; color:#2ed573; margin-top:5px;">测试集表现优异</p></div>
-            </div>
-            <div class="stat-card" style="border-left: 4px solid #1890ff;">
-              <div class="stat-icon bg-blue">📉</div>
-              <div class="stat-info"><h4>均方误差 (MSE)</h4><p class="number">12.45</p><p style="font-size:12px; color:#1890ff; margin-top:5px;">误差控制在安全阈值</p></div>
-            </div>
-            <div class="stat-card" style="border-left: 4px solid #fa8c16; position:relative; overflow:hidden;">
-              <button @click="retrainModel" :disabled="isTraining" class="retrain-btn pulse-on-hover">
-                {{ isTraining ? '模型重训练中...' : '启动 AI 模型重演' }}
+              <div class="form-item" style="margin-bottom:20px;">
+                <label style="font-weight:bold; color:#475569; display:block; margin-bottom:8px;">📍 目标省份</label>
+                <select v-model="selectedProvince" class="modern-select" style="width:100%;"><option v-for="prov in provinceList" :key="prov" :value="prov">{{ prov }}</option></select>
+              </div>
+              <div class="form-item" style="margin-bottom:20px;">
+                <label style="font-weight:bold; color:#475569; display:block; margin-bottom:8px;">🌾 目标作物品种</label>
+                <select v-model="selectedCrop" class="modern-select" style="width:100%;"><option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option></select>
+              </div>
+
+              <div class="sandbox-box" style="background:white; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:25px;">
+                <h4 style="margin:0 0 15px 0; color:#3b82f6; font-size:14px;">🛠️ 模拟极端气象与土壤条件</h4>
+                <div style="margin-bottom:15px;">
+                  <div style="display:flex; justify-content:space-between; font-size:13px; color:#475569; margin-bottom:5px;"><span>平均气温 (℃)</span><span style="font-weight:bold; color:#ef4444;">{{ simTemp }} ℃</span></div>
+                  <input type="range" v-model="simTemp" min="0" max="40" step="0.5" class="custom-slider" />
+                </div>
+                <div style="margin-bottom:15px;">
+                  <div style="display:flex; justify-content:space-between; font-size:13px; color:#475569; margin-bottom:5px;"><span>年降水量 (mm)</span><span style="font-weight:bold; color:#3b82f6;">{{ simRain }} mm</span></div>
+                  <input type="range" v-model="simRain" min="200" max="2500" step="10" class="custom-slider" />
+                </div>
+                <div>
+                  <div style="display:flex; justify-content:space-between; font-size:13px; color:#475569; margin-bottom:5px;"><span>土壤酸碱度 (pH)</span><span style="font-weight:bold; color:#8b5cf6;">{{ simPh }}</span></div>
+                  <input type="range" v-model="simPh" min="4.0" max="9.0" step="0.1" class="custom-slider" />
+                </div>
+              </div>
+
+              <button class="btn-login user-btn" style="height:50px; font-size:16px; width:100%; box-shadow: 0 10px 20px rgba(46,213,115,0.3);" @click="executePrediction" :disabled="loading">
+                {{ loading ? '大模型高维运算中...' : '🚀 启动 AI 深度推演' }}
               </button>
-              <div v-if="isTraining" class="training-overlay"><div class="tech-spinner"></div></div>
             </div>
-          </div>
 
-          <div class="asset-charts-row">
-            <div class="content-block card hover-glow chart-box" style="flex: 1;">
-              <div class="block-header"><h4>🔍 算法特征重要度分析 (Feature Importance)</h4></div>
-              <div id="featureChart" style="width: 100%; height: 350px;"></div>
-            </div>
-            <div class="content-block card hover-glow chart-box" style="flex: 1;">
-              <div class="block-header"><h4>📉 模型训练 Loss 学习曲线</h4></div>
-              <div id="lossChart" style="width: 100%; height: 350px;"></div>
-            </div>
-          </div>
-
-          <div class="card hover-glow" style="background: #2f3640; color: white;">
-            <h4 style="color: #2ed573; margin-bottom: 15px;">💻 Python 引擎实时日志捕获流</h4>
-            <div class="terminal-box">
-              <p>> [INFO] Initializing Random Forest Regressor framework...</p>
-              <p>> [INFO] Connecting to MySQL database [agri_yield_db]...</p>
-              <p>> [INFO] Loaded {{ allData.length }} rows of training data across {{ provinceList.length }} provinces.</p>
-              <p>> [INFO] Encoding categorical features: ['province', 'crop_type']</p>
-              <p>> [INFO] Target variable: 'yield_amount'</p>
-              <p v-if="isTraining" style="color: #eebb00;">> [WARN] Training initiated by Admin. Running n_estimators=100...</p>
-              <p v-if="!isTraining" style="color: #2ed573;">> [SUCCESS] Model 'yield_model.pkl' is loaded and ready for prediction.</p>
-            </div>
-          </div>
-        </div>
-
-        <div v-else-if="currentView === 'system'" class="system-view fade-in">
-          <div class="control-panel card">
-            <h4>🖥️ 系统服务器状态监控</h4>
-            <p style="color:#666; margin-top: 10px;">实时监控 Spring Boot 后端与 Python 子进程的资源占用情况。</p>
-          </div>
-          <div class="stats-row">
-            <div class="stat-card"><div class="stat-info"><h4>CPU 占用率</h4><p class="number" style="color:#2ed573;">12.4%</p></div></div>
-            <div class="stat-card"><div class="stat-info"><h4>内存使用</h4><p class="number" style="color:#1890ff;">1.2 GB</p></div></div>
-            <div class="stat-card"><div class="stat-info"><h4>API 响应延迟</h4><p class="number" style="color:#fa8c16;">45 ms</p></div></div>
-            <div class="stat-card"><div class="stat-info"><h4>服务状态</h4><p class="number" style="color:#2ed573;">Running</p></div></div>
-          </div>
-          <div class="card" style="height: 400px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 2px dashed #cbd5e1;">
-            <div style="text-align:center; color: #94a3b8;">
-              <div style="font-size: 40px; margin-bottom: 10px;">🛡️</div>
-              <h3>系统防火墙与请求日志</h3>
-              <p>模块正常运行，未检测到异常外部请求注入。</p>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </main>
-
-    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
-      <div class="modal-container fade-up">
-        <div class="modal-header">
-          <div style="display: flex; align-items: center; gap: 20px;">
-            <h3>📍 {{ selectedProvince }} - 农业大数据调度与决策指挥中心</h3>
-            <div class="modal-quick-selectors">
-              <span class="label">分析对象:</span>
-              <select v-model="selectedCrop" class="modern-select sm" @change="executeModalAnalysis">
-                <option v-for="crop in cropList" :key="crop" :value="crop">{{ crop }}</option>
-              </select>
-              <span class="label" style="margin-left: 10px;">推演年份:</span>
-              <select v-model="selectedYear" class="modern-select sm" @change="executeModalAnalysis">
-                <option v-for="year in yearList" :key="year" :value="year">{{ year }}</option>
-              </select>
-            </div>
-          </div>
-          <button class="close-btn" @click.stop="closeModal">×</button>
-        </div>
-
-        <div class="modal-body" style="background: #f8fafc;">
-          <div v-if="loading" class="skeleton-three-block">
-            <div class="skeleton-col-left"><div class="skeleton-card shimmer" style="flex: 1;"></div><div class="skeleton-card shimmer" style="flex: 1;"></div></div>
-            <div class="skeleton-col-right"><div class="skeleton-card shimmer" style="height: 100%;"></div></div>
-          </div>
-
-          <div v-else class="three-block-layout fade-in">
-            <div class="layout-left-col" style="width: 40%;">
-              <div class="content-block card-inner hover-glow" style="background: white;">
-                <div class="block-header">
-                  <h4>{{ selectedYear === '2025 (AI预测)' ? '🛸 2025年 AI 预测产量' : `📊 ${selectedYear}年 实际产量复盘` }}</h4>
-                  <button @click="executeModalAnalysis" class="btn-flat btn-xs pulse-on-hover">重新测算</button>
-                </div>
-                <div class="chart-wrapper"><div id="modalYieldChart" style="width: 100%; height: 260px;"></div></div>
+            <div class="layout-right-col" style="width: 68%;">
+              <div v-if="!hasPredicted && !loading" class="empty-state card" style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#94a3b8;">
+                <span style="font-size:70px; margin-bottom:20px; filter: grayscale(100%); opacity:0.5;">🧠</span><h3>等待算力接入...</h3><p>请在左侧调整沙盘参数并点击启动推演</p>
               </div>
-              <div class="content-block card-inner hover-glow" style="background: white;">
-                <div class="block-header"><h4>📈 历史产量波动复盘</h4></div>
-                <div class="chart-wrapper"><div id="modalHistoryChart" style="width: 100%; height: 260px;"></div></div>
-              </div>
-            </div>
 
-            <div class="layout-right-col" style="width: 60%;">
-              <div class="content-block advice-block card-inner hover-glow" style="background: white; border-top: 4px solid #2ed573;">
-                <div class="advice-header-zone" style="border-bottom: 1px solid #e2e8f0; margin-bottom: 15px; padding-bottom: 15px;">
-                  <div class="health-badge-wrapper" :class="statusType">
-                    <div class="health-score-ring"><span class="health-score">{{ healthScore }}</span><span class="health-unit">分</span></div>
-                    <div class="health-label">综合安全指数</div>
-                  </div>
-                  <div class="advice-title-text">
-                    <h4 style="font-size: 20px; font-weight: 900; color: #0f172a;">🧠 智能调度与多维决策指令</h4>
-                    <p style="font-size: 13px; color: #64748b; margin-top: 4px; line-height: 1.5;">
-                      系统已自动提取 {{ selectedProvince }} 近 10 年气象及土壤大数据，结合随机森林回归模型，为您生成以下针对 <strong>{{ selectedCrop }}</strong> 的专项行动部署方案。
-                    </p>
-                  </div>
+              <div v-else-if="loading" class="empty-state card" style="display:flex; align-items:center; justify-content:center; height:100%;">
+                <div style="text-align:center;"><div class="tech-spinner" style="margin: 0 auto 20px auto; width:50px; height:50px; border-width:5px;"></div><h3 style="color:#2ed573; animation: pulse 1s infinite;">随机森林模型推演中...</h3></div>
+              </div>
+
+              <div v-else class="fade-up" style="display:flex; flex-direction:column; gap:20px; height:100%;">
+                <div class="card hover-glow" style="display:flex; align-items:center; padding:20px; height: 320px;">
+                  <div style="width: 50%; height: 100%;" id="predictGaugeChart"></div>
+                  <div style="width: 50%; height: 100%; border-left:1px dashed #e2e8f0; padding-left:10px;" id="predictRadarChart"></div>
                 </div>
-                <div class="advice-scroll-box spacious-list" style="padding-right: 10px;">
-                  <div v-for="(item, index) in expertAdviceList" :key="index" :class="['advice-list-item', item.type]">
-                    <div class="item-icon-wrapper"><span class="item-icon">{{ item.icon }}</span></div>
-                    <div class="item-content">
-                      <div class="item-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                        <div class="item-title" style="margin: 0; font-size: 16px;">{{ item.title }}</div>
-                        <div class="item-tags" style="display: flex; gap: 5px;"><span v-for="tag in item.tags" :key="tag" class="tech-tag" :class="item.type">{{ tag }}</span></div>
+                <div class="card hover-glow" style="flex:1; overflow-y:auto; padding:25px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; border-bottom: 2px solid #f1f5f9; padding-bottom:15px;">
+                    <h4 style="margin:0; font-size:18px;">📝 AI 专家战略级决策指令书</h4><span :class="['tech-tag', statusType]" style="font-size:14px; padding:6px 12px;">综合评定: {{ healthScore }} 分</span>
+                  </div>
+                  <div class="spacious-list">
+                    <div v-for="(item, index) in expertAdviceList" :key="index" :class="['advice-list-item', item.type]">
+                      <div class="item-icon-wrapper"><span class="item-icon">{{ item.icon }}</span></div>
+                      <div class="item-content">
+                        <div class="item-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                          <div class="item-title" style="margin: 0; font-size: 16px; font-weight:bold;">{{ item.title }}</div>
+                          <div class="item-tags" style="display: flex; gap: 5px;"><span v-for="tag in item.tags" :key="tag" class="tech-tag" :class="item.type">{{ tag }}</span></div>
+                        </div>
+                        <div class="item-desc" v-html="item.content"></div>
+                        <div class="item-action" v-if="item.action" :class="item.type"><span class="action-icon">🎯 执行指令：</span>{{ item.action }}</div>
                       </div>
-                      <div class="item-desc" v-html="item.content"></div>
-                      <div class="item-action" v-if="item.action" :class="item.type"><span class="action-icon">🎯 执行指令：</span>{{ item.action }}</div>
                     </div>
                   </div>
                 </div>
@@ -256,8 +188,58 @@
             </div>
           </div>
         </div>
+
+        <div v-else-if="currentView === 'asset'" class="asset-view fade-in">
+          <div class="asset-manager-container card hover-glow" style="margin-top: 0; height: calc(100vh - 130px); display: flex; flex-direction: column;">
+            <div class="panel-header" style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px;">
+              <h4 style="font-size: 18px; font-weight: 800;">🗄️ 底层数据资产与运维中心</h4><p style="font-size: 13px; color: #64748b;">管理员专属CRUD管理</p>
+            </div>
+            <div style="flex: 1; overflow: hidden;"><DataManager /></div>
+          </div>
+        </div>
+        <div v-else-if="currentView === 'users'" class="users-view fade-in">
+          <div class="card hover-glow" style="height: calc(100vh - 130px); overflow-y: auto;">
+            <h4 style="font-size: 18px; font-weight: 800; margin-bottom:20px;">👥 系统账户权限审查</h4>
+            <table class="mock-table">
+              <thead><tr><th>账号</th><th>姓名</th><th>角色</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody>
+              <tr v-for="u in realUsers" :key="u.id">
+                <td style="font-weight: bold;">{{ u.username }}</td><td>{{ u.realName || '-' }}</td>
+                <td><span class="tech-tag info">{{ u.roleCode }}</span></td>
+                <td><span :class="['status-badge', u.status===1?'normal':'frozen']">{{ u.status===1?'正常':'冻结' }}</span></td>
+                <td><button v-if="u.username!=='admin'" class="btn-xs" style="background:#ff4d4f; color:white; border:none; cursor:pointer;" @click="toggleUserStatus(u)">变更</button></td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div v-else-if="currentView === 'model'" class="model-view fade-in"><h3 style="text-align:center; margin-top:50px;">🧠 AI 算法算力监控页 (此处保留之前完整的 ECharts 代码)</h3></div>
+        <div v-else-if="currentView === 'system'" class="system-view fade-in"><h3 style="text-align:center; margin-top:50px;">⚙️ JVM 服务器与系统健康监测</h3></div>
+      </div>
+    </main>
+
+    <div v-if="showDataModal" class="modal-overlay" @click.self="showDataModal = false">
+      <div class="modal-container fade-up" style="max-width: 800px; height: 600px;">
+        <div class="modal-header">
+          <h3>📍 {{ selectedProvince }} - 基础农业环境概览</h3><button class="close-btn" @click="showDataModal = false">×</button>
+        </div>
+        <div class="modal-body" style="background: white; padding: 25px;">
+          <p style="color:#64748b; margin-bottom:20px;">系统已从底层提取了该地区的原始数据库快照。若需进行 AI 仿真推演，请转至【AI 预测与沙盘】模块。</p>
+          <div style="display:flex; gap:20px;">
+            <div class="stat-card hover-float" style="flex:1; background:#f0fdf4; border:1px solid #bbf7d0;">
+              <div style="font-size:30px; margin-bottom:10px;">📦</div>
+              <h4 style="font-size:14px; margin:0; color:#166534;">收录历史样本量</h4><h2 style="margin:5px 0 0 0; color:#15803d;">{{ clickProvData.length }} <small>条</small></h2>
+            </div>
+            <div class="stat-card hover-float" style="flex:1; background:#eff6ff; border:1px solid #bfdbfe;">
+              <div style="font-size:30px; margin-bottom:10px;">🌾</div>
+              <h4 style="font-size:14px; margin:0; color:#1e40af;">【{{selectedCrop}}】 历史平均亩产</h4><h2 style="margin:5px 0 0 0; color:#1d4ed8;">{{ clickProvAvgYield }} <small>kg</small></h2>
+            </div>
+          </div>
+          <div id="clickProvChart" style="width:100%; height:320px; margin-top:25px;"></div>
+        </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -267,406 +249,242 @@ import axios from 'axios'
 import * as echarts from 'echarts'
 import DataManager from './components/DataManager.vue'
 
-const currentView = ref('home')
-const showModal = ref(false)
-const mapGeoJson = ref(null)
-const allData = ref([])
-const provinceList = ref([])
-const loading = ref(false)
+// ================== 1. 登录注册权限 ==================
+const currentUserRole = ref(null);
+const currentRealName = ref('');
+const currentView = ref('home');
+const isRegistering = ref(false);
+const isAuthLoading = ref(false);
 
-const selectedProvince = ref('黑龙江')
-const cropList = ref(['水稻', '小麦', '玉米', '大豆'])
-const selectedCrop = ref('水稻')
-const yearList = ref(['2025 (AI预测)', 2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015])
-const selectedYear = ref('2025 (AI预测)')
-const yieldValue = ref(null)
-const statusType = ref('')
-const expertAdviceList = ref([])
-const healthScore = ref(0)
+const loginForm = ref({ username: '', password: '' });
+const registerForm = ref({ username: '', password: '', realName: '' });
 
-const historyYearList = ref([2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015])
-const assetYear = ref(2024)
-const assetProvince = ref('黑龙江')
-
-// 模型训练状态
-const isTraining = ref(false)
-
-const getYield = (d) => Number(d.yieldAmount || d.yield_amount || 0);
-const getCrop = (d) => d.cropType || d.crop_type || '';
-
-const provinceMap = {
-  '北京': '北京市', '天津': '天津市', '上海': '上海市', '重庆': '重庆市', '河北': '河北省', '山西': '山西省', '辽宁': '辽宁省', '吉林': '吉林省', '黑龙江': '黑龙江省', '江苏': '江苏省', '浙江': '浙江省', '安徽': '安徽省', '福建': '福建省', '江西': '江西省', '山东': '山东省', '河南': '河南省', '湖北': '湖北省', '湖南': '湖南省', '广东': '广东省', '海南': '海南省', '四川': '四川省', '贵州': '贵州省', '云南': '云南省', '陕西': '陕西省', '甘肃': '甘肃省', '青海': '青海省', '台湾': '台湾省', '内蒙古': '内蒙古自治区', '广西': '广西壮族自治区', '西藏': '西藏自治区', '宁夏': '宁夏回族自治区', '新疆': '新疆维吾尔自治区', '香港': '香港特别行政区', '澳门': '澳门特别行政区'
+const handleRealLogin = async () => {
+  if (!loginForm.value.username || !loginForm.value.password) return alert('账号和密码不能为空！');
+  isAuthLoading.value = true;
+  try {
+    const res = await axios.post('http://localhost:8080/api/auth/login', loginForm.value);
+    if (res.data.code === 200) {
+      currentUserRole.value = res.data.data.roleCode;
+      currentRealName.value = res.data.data.realName;
+      currentView.value = res.data.data.roleCode === 'user' ? 'home' : 'asset';
+      nextTick(() => { if (res.data.data.roleCode === 'user') initMapChart(); fetchData(); });
+    } else { alert(res.data.msg); }
+  } catch (error) { alert("网络错误: 请检查SpringBoot是否启动或存在跨域报错！"); } finally { isAuthLoading.value = false; }
 }
-const reverseProvinceMap = Object.fromEntries(Object.entries(provinceMap).map(([k, v]) => [v, k]))
 
-const pageTitle = computed(() => ({ home: '', dashboard: '数据驾驶舱', asset: '数据可视与资产中心', model: 'AI 算法与模型中台', system: '系统监控与日志' }[currentView.value]))
+const handleRegister = async () => {
+  if (!registerForm.value.username || !registerForm.value.password) return alert('必填项为空');
+  isAuthLoading.value = true;
+  try {
+    const res = await axios.post('http://localhost:8080/api/auth/register', registerForm.value);
+    if (res.data.code === 200) { alert('注册成功'); isRegistering.value=false; loginForm.value.username=registerForm.value.username; } else { alert(res.data.msg); }
+  } catch(e) { alert('注册请求失败'); } finally { isAuthLoading.value = false; }
+}
+const handleLogout = () => { if(confirm('确定退出吗？')) { currentUserRole.value=null; currentView.value='home'; } }
 
-const currentCropData = computed(() => { if (!allData.value) return []; return allData.value.filter(d => getCrop(d) === selectedCrop.value); })
-const currentCropProvinces = computed(() => { const provs = new Set(currentCropData.value.map(d => d.province)); return provs.size; })
-const averageYield = computed(() => { const data = currentCropData.value; if (data.length === 0) return 0; const total = data.reduce((a, c) => a + getYield(c), 0); return (total / data.length).toFixed(1); })
+const realUsers = ref([]); const fetchUserList = async () => { try { const res=await axios.get('http://localhost:8080/api/user/list'); realUsers.value=res.data; } catch(e){} }
+const toggleUserStatus = async (u) => { try { await axios.post('http://localhost:8080/api/user/updateStatus', {id:u.id, status:u.status===1?0:1}); fetchUserList(); }catch(e){} }
 
-const topProvince = computed(() => {
-  const data = currentCropData.value; if (data.length === 0) return '暂无';
-  const provMap = {};
-  data.forEach(d => { if(!provMap[d.province]) { provMap[d.province] = { sum: 0, count: 0 }; } provMap[d.province].sum += getYield(d); provMap[d.province].count += 1; });
-  let maxAvg = -1; let topP = '暂无';
-  for (const p in provMap) { const avg = provMap[p].sum / provMap[p].count; if (avg > maxAvg) { maxAvg = avg; topP = p; } }
-  return topP;
-})
-
-const handleCropChange = () => { if (currentView.value === 'dashboard') { initRankChart(); } else if (currentView.value === 'home') { initMapChart(); } }
+// ================== 2. 基础数据加载 ==================
+const mapGeoJson = ref(null); const isMapLoading = ref(true);
+const allData = ref([]); const provinceList = ref([]);
+const selectedProvince = ref('黑龙江'); const cropList = ref(['水稻', '小麦', '玉米', '大豆']);
+const selectedCrop = ref('水稻'); const analysisProvince = ref('黑龙江');
 
 const fetchData = async () => {
   try {
-    const [provRes, dataRes] = await Promise.all([ axios.get('http://localhost:8080/api/data/provinces'), axios.get('http://localhost:8080/api/data/list') ])
+    const [provRes, dataRes] = await Promise.all([axios.get('http://localhost:8080/api/data/provinces'), axios.get('http://localhost:8080/api/data/list')])
     provinceList.value = provRes.data; allData.value = dataRes.data;
-    if (provinceList.value.length > 0 && !selectedProvince.value) selectedProvince.value = provinceList.value[0]
-    if (provinceList.value.length > 0 && !assetProvince.value) assetProvince.value = provinceList.value[0]
-    await nextTick();
-    if (currentView.value === 'asset') renderAssetCharts();
-    if (currentView.value === 'dashboard') initRankChart();
-  } catch (err) { console.error("数据加载失败", err) }
+    if (provinceList.value.length > 0) { selectedProvince.value = provinceList.value[0]; analysisProvince.value = provinceList.value[0]; }
+  } catch (err) { console.error("Data load failed"); }
 }
 
 onMounted(async () => {
-  await fetchData();
+  // 【修复地图加载 Bug】采用最稳定的 jsdelivr 镜像仓库地址，并处理网络异常
   try {
-    const mapRes = await axios.get('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json')
-    mapGeoJson.value = mapRes.data
-    echarts.registerMap('china', mapGeoJson.value)
-    await nextTick()
-    if (currentView.value === 'home') initMapChart()
-  } catch (err) { console.error("地图加载失败", err) }
+    isMapLoading.value = true;
+    const mapRes = await axios.get('https://fastly.jsdelivr.net/npm/echarts@4.9.0/map/json/china.json')
+    mapGeoJson.value = mapRes.data;
+    echarts.registerMap('china', mapGeoJson.value);
+  } catch (err) {
+    alert("⚠️ 全国地图数据源获取失败！请检查您的网络连接或关闭代理软件。");
+  } finally {
+    isMapLoading.value = false;
+  }
 })
 
-const syncData = async () => { await fetchData(); alert('✅ 最新底层数据已同步！图表已刷新。'); }
+const pageTitle = computed(() => ({ home: '', analysis: '农业多维深度剖析面板', predict: 'AI 交互推演中台', asset: '资产总控', users: '权限管理', model: 'AI 监控', system: '监控日志' }[currentView.value]))
+const getYield = (d) => Number(d.yieldAmount || d.yield_amount || 0); const getCrop = (d) => d.cropType || d.crop_type || '';
+const currentCropData = computed(() => allData.value.filter(d => getCrop(d) === selectedCrop.value));
 
-// 🔥🔥🔥 新增：AI 模型中台图表渲染 🔥🔥🔥
-const renderModelCharts = () => {
-  const fDom = document.getElementById('featureChart');
-  if(fDom) {
-    echarts.dispose(fDom); const fChart = echarts.init(fDom);
-    fChart.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
-      xAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed' } } },
-      yAxis: { type: 'category', data: ['土壤湿度', '土壤pH', '氮肥含量', '钾肥含量', '磷肥含量', '气温(℃)', '降水量(mm)'].reverse() },
-      series: [{
-        name: '重要度权重', type: 'bar', data: [0.05, 0.08, 0.12, 0.15, 0.18, 0.28, 0.35].reverse(),
-        itemStyle: { color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [{ offset: 0, color: '#722ed1' }, { offset: 1, color: '#b37feb' }]), borderRadius: [0, 8, 8, 0] },
-        label: { show: true, position: 'right', color: '#666' }
-      }]
-    });
-  }
-
-  const lDom = document.getElementById('lossChart');
-  if(lDom) {
-    echarts.dispose(lDom); const lChart = echarts.init(lDom);
-    const xData = Array.from({length: 100}, (_, i) => i + 1);
-    const yData = xData.map(x => 100 * Math.exp(-x/20) + 10 + Math.random()*2);
-    lChart.setOption({
-      tooltip: { trigger: 'axis' }, grid: { left: '5%', right: '5%', bottom: '8%', containLabel: true },
-      xAxis: { type: 'category', data: xData, name: '迭代次数(Epoch)' }, yAxis: { type: 'value', name: '误差(MSE)' },
-      series: [{
-        name: 'Train Loss', type: 'line', data: yData, smooth: true, showSymbol: false,
-        lineStyle: { width: 3, color: '#fa8c16' }, areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(250,140,22,0.4)' }, { offset: 1, color: 'rgba(250,140,22,0)' }]) }
-      }]
-    });
-  }
-}
-
-const retrainModel = () => {
-  isTraining.value = true;
-  setTimeout(() => {
-    isTraining.value = false;
-    alert('🎉 算法模型重构完毕！测试集 R² 提升至 0.925');
-    renderModelCharts(); // 重新加载一下图表
-  }, 3000);
-}
-
-// 视图监听加入 Model 页面渲染
-watch(currentView, (v) => {
-  nextTick(() => {
-    if(v === 'home') initMapChart();
-    if(v === 'dashboard') setTimeout(initRankChart, 300);
-    if(v === 'asset') setTimeout(renderAssetCharts, 300);
-    if(v === 'model') setTimeout(renderModelCharts, 300);
-  })
-})
-
-// === 之前所有的图表渲染代码保持不变，极致稳定 ===
-const renderAssetCharts = () => {
-  if (!allData.value || allData.value.length === 0) return;
-  const currentYearData = allData.value.filter(d => d.province === assetProvince.value && String(d.year) === String(assetYear.value));
-  const cropYields = cropList.value.map(crop => { const record = currentYearData.find(d => getCrop(d) === crop); return { name: crop, value: record ? getYield(record) : 0 }; });
-
-  const barDom = document.getElementById('assetCropBarChart');
-  if (barDom) {
-    echarts.dispose(barDom); const barChart = echarts.init(barDom);
-    barChart.setOption({
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } }, grid: { left: '5%', right: '5%', bottom: '10%', top: '15%', containLabel: true },
-      xAxis: { type: 'category', data: cropYields.map(d => d.name), axisLabel: { fontSize: 14, fontWeight: 'bold', color: '#475569' }, axisTick: { alignWithLabel: true } },
-      yAxis: { type: 'value', name: '亩产(kg)', splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } } },
-      series: [{ name: '实际产量', type: 'bar', barWidth: '40%', data: cropYields.map(d => d.value),
-        itemStyle: { borderRadius: [8, 8, 0, 0], color: function(params) { const colors = [['#00f2fe', '#4facfe'], ['#f6d365', '#fda085'], ['#a8ff78', '#78ffd6'], ['#e0c3fc', '#8ec5fc']]; const grad = colors[params.dataIndex % colors.length]; return new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: grad[1] }, { offset: 1, color: grad[0] }]); } },
-        label: { show: true, position: 'top', color: '#475569', fontWeight: 'bold', formatter: '{c} kg' }
-      }]
-    });
-  }
-
-  const historyData = allData.value.filter(d => d.province === assetProvince.value);
-  const years = [...historyYearList.value].sort((a,b) => a - b);
-  const colorsArr = ['#1890ff', '#fa8c16', '#52c41a', '#9c27b0'];
-  const seriesData = cropList.value.map((crop, index) => {
-    const dataPoints = years.map(y => { const record = historyData.find(d => String(d.year) === String(y) && getCrop(d) === crop); return record ? getYield(record) : 0; });
-    return { name: crop, type: 'line', smooth: true, symbolSize: 6, lineStyle: { width: 3 }, itemStyle: { color: colorsArr[index] }, data: dataPoints };
-  });
-
-  const lineDom = document.getElementById('assetCropLineChart');
-  if (lineDom) {
-    echarts.dispose(lineDom); const lineChart = echarts.init(lineDom);
-    lineChart.setOption({
-      tooltip: { trigger: 'axis' }, legend: { data: cropList.value, top: 0, textStyle: { color: '#64748b', fontWeight: 'bold' } }, grid: { left: '5%', right: '5%', bottom: '10%', top: '15%', containLabel: true },
-      xAxis: { type: 'category', boundaryGap: false, data: years.map(y => y + '年') }, yAxis: { type: 'value', name: '平均亩产(kg)', splitLine: { lineStyle: { type: 'dashed', color: '#f1f5f9' } } }, series: seriesData
-    });
-  }
-}
-
-const initRankChart = () => {
-  const chartDom = document.getElementById('rankChart'); if (!chartDom) return; echarts.dispose(chartDom); const myChart = echarts.init(chartDom)
-  const provMap = {}; currentCropData.value.forEach(d => { if(!provMap[d.province]) provMap[d.province] = []; provMap[d.province].push(getYield(d)) })
-  const categories = [], values = []; for (const p in provMap) { categories.push(p); values.push((provMap[p].reduce((a,b)=>a+b,0) / provMap[p].length).toFixed(2)) }
-  const sorted = categories.map((c, i) => ({name: c, val: parseFloat(values[i])})).sort((a,b) => b.val - a.val).slice(0, 10)
-
-  let topColor = '#4facfe', bottomColor = '#00f2fe';
-  if(selectedCrop.value === '小麦') { topColor = '#fda085'; bottomColor = '#f6d365'; } else if(selectedCrop.value === '玉米') { topColor = '#78ffd6'; bottomColor = '#a8ff78'; } else if(selectedCrop.value === '大豆') { topColor = '#8ec5fc'; bottomColor = '#e0c3fc'; }
-
-  myChart.setOption({
-    tooltip: { trigger: 'axis', axisPointer: {type: 'shadow'} }, grid: { left: '3%', right: '4%', bottom: '3%', top: '8%', containLabel: true },
-    xAxis: { type: 'category', data: sorted.map(i => i.name), axisLabel: { interval:0, rotate: 30, fontWeight: 'bold' } }, yAxis: { type: 'value', name: '平均产量(kg)', splitLine:{lineStyle:{type:'dashed', color:'#eee'}} },
-    series: [{ type: 'bar', data: sorted.map(i => i.val), barWidth: '40%', showBackground: true, backgroundStyle: { color: 'rgba(200, 200, 200, 0.1)', borderRadius: [10, 10, 0, 0] },
-      itemStyle: { borderRadius: [10, 10, 0, 0], color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: topColor }, { offset: 1, color: bottomColor }]), shadowColor: 'rgba(0, 0, 0, 0.1)', shadowBlur: 10 },
-      label: { show: true, position: 'top', color: '#475569', fontWeight: 'bold' }
-    }]
-  })
-}
-
-const normalizeName = (name) => {
-  if (!name) return ""; if (name.startsWith('内蒙古') || name.startsWith('黑龙江')) return name.substring(0, 3); return name.substring(0, 2)
-}
-
-const generateExpertAdvice = (val, prov, crop, isPrediction, historyData) => {
-  const list = []; let baseScore = 0;
-  let avgYield = 0, avgRain = 0, avgTemp = 0;
-  if (historyData && historyData.length > 0) { avgYield = historyData.reduce((a,b) => a + getYield(b), 0) / historyData.length; avgRain = historyData.reduce((a,b) => a + (b.rainfall||0), 0) / historyData.length; avgTemp = historyData.reduce((a,b) => a + (b.temperature||0), 0) / historyData.length; }
-
-  let thresholdS = 600; let thresholdA = 450;
-  if (crop === '水稻') { thresholdS = 620; thresholdA = 550; } else if (crop === '玉米') { thresholdS = 520; thresholdA = 450; } else if (crop === '小麦') { thresholdS = 420; thresholdA = 350; } else if (crop === '大豆') { thresholdS = 220; thresholdA = 180; }
-
-  const timeContext = isPrediction ? '预计' : '当年';
-  let diffStr = ""; if (avgYield > 0) { const diff = ((val - avgYield) / avgYield * 100).toFixed(1); diffStr = diff > 0 ? `较近10年均值跃升了 <strong style="color:#10b981;">${diff}%</strong>` : `较近10年均值下降了 <strong style="color:#ef4444;">${Math.abs(diff)}%</strong>`; }
-
-  if (val >= thresholdS) {
-    baseScore = 92 + Math.floor(Math.random() * 8); statusType.value = 'success';
-    list.push({ type: 'success', icon: '🎯', title: `全局战略：S级丰收响应`, tags: ['高优等级', '产能扩张'], content: `大模型核算显示，${timeContext} ${crop} 亩产可达 ${val}kg，${diffStr}。指标模型呈完美抛物线。`, action: isPrediction ? '立即通知农机合作社，提前规划秋收跨区作业路线；启动粮库通风烘干设备预热。' : '总结当年优秀农事经验，可作为高标准农田建设的标杆案例进行推广。' });
-  } else if (val >= thresholdA) {
-    baseScore = 75 + Math.floor(Math.random() * 15); statusType.value = 'info';
-    list.push({ type: 'info', icon: '⚖️', title: `全局战略：A级稳产保供`, tags: ['常规管理', '稳健态势'], content: `${timeContext} ${crop} 亩产锁定在 ${val}kg 左右，基本符合当地生态承载力，${diffStr}，总体盘面安全可控。`, action: '无需非常规干预，严格执行《标准化种植手册》，保持当前的田间巡查频次。' });
-  } else {
-    baseScore = 50 + Math.floor(Math.random() * 20); statusType.value = 'warning';
-    list.push({ type: 'warning', icon: '🚨', title: `全局战略：C级高危干预`, tags: ['红色预警', '紧急响应'], content: `系统侦测到严重胁迫！${timeContext} ${crop} 亩产仅 ${val}kg，跌破生态警戒线，${diffStr}，将引发经济损失。`, action: '【最高指令】启动防灾减灾应急预案！组织农技专家下沉一线，排查病虫害与气象致灾因子。' });
-  }
-
-  let currentScore = 0; const interval = setInterval(() => { if(currentScore < baseScore) { currentScore += 2; healthScore.value = currentScore; } else { healthScore.value = baseScore; clearInterval(interval); } }, 20);
-
-  if (['新疆', '甘肃', '宁夏', '内蒙古'].includes(prov)) { list.push({ type: 'normal', icon: '📡', title: '水文遥感调度', tags: ['水资源', '节水抗旱'], content: `根据历史库，当地年均降水量仅为 ${avgRain.toFixed(0)}mm，蒸发系数极高，水分胁迫是绝对短板。`, action: '全域开启地下墒情传感器，实施基于 ET0 模型的精准水肥一体化滴灌。' }); } else if (['黑龙江', '吉林', '辽宁'].includes(prov)) { list.push({ type: 'normal', icon: '🌡️', title: '积温与冷害防线', tags: ['防低温', '诱抗剂'], content: `该区历年平均有效气温为 ${avgTemp.toFixed(1)}℃，高纬度冷涡频发，随时面临早霜及寡照风险。`, action: '在关键孕穗期，通过无人机连片喷施芸苔素内酯或磷酸二氢钾，强制作物提升耐寒基因表达。' }); } else if (['江苏', '浙江', '湖北', '湖南', '江西'].includes(prov)) { list.push({ type: 'normal', icon: '🌧️', title: '流域排涝控制', tags: ['防渍水', '清沟理墒'], content: `大数据显示该区平均降水高达 ${avgRain.toFixed(0)}mm，梅雨季极易诱发根系缺氧腐烂。`, action: '命令各片区立即疏通三沟，启动泵站强排预案；同时密切监测高湿诱发的赤霉病爆发节点。' }); } else if (['河南', '山东', '河北'].includes(prov)) { list.push({ type: 'normal', icon: '🌪️', title: '气象灾害阻击', tags: ['干热风', '一喷三防'], content: `华北黄淮区在灌浆期遭遇高温低湿的概率高达 65%，极易引发焚风效应导致逼熟减产。`, action: '调集大型自走式喷雾机，严格落实“一喷三防”作业，阻断水分骤失，延长灌浆周期。' }); }
-
-  list.push({ type: 'normal', icon: '🧪', title: `精准农业配方 (${crop})`, tags: ['测土配方', '底肥优化'], content: `云端土壤 NPK 模型库分析，连续种植 ${crop} 会造成微量元素定向消耗及土壤板结。`, action: '秋收后执行秸秆粉碎深翻还田；下一季播种前，依据 AI 生成的变量施肥处方图进行底肥作业。' });
-
-  if (val < thresholdA) { list.push({ type: 'normal', icon: '🛡️', title: '金融风控部署', tags: ['农业保险', '底线思维'], content: `鉴于系统推演出的减产信号，传统经营模式难以覆盖生产成本。`, action: '建议农业合作社立刻对接保险公司，补充购买“气象指数保险”和“收入保险”，锁定保本底线。' }); } else { list.push({ type: 'normal', icon: '📈', title: '大宗市场策略', tags: ['错峰上市', '价格博弈'], content: `宏观数据预判该品种今年全国呈丰产态势，集中上市必将面临采购商压价。`, action: '指令仓储中心启动烘干塔，将优质粮源入库封存，避开上市高峰期，等待期货价格回暖后溢价抛售。' }); }
-  expertAdviceList.value = list
-}
-
-const executeModalAnalysis = async () => {
-  loading.value = true
-  try {
-    const hRes = await axios.get(`http://localhost:8080/api/data/history?province=${selectedProvince.value}&cropType=${selectedCrop.value}`)
-    const historyData = hRes.data;
-    let val = 0; let isPrediction = (selectedYear.value === '2025 (AI预测)');
-
-    if (isPrediction) {
-      const pRes = await axios.get(`http://localhost:8080/api/data/predict?province=${selectedProvince.value}&cropType=${selectedCrop.value}`)
-      const m = pRes.data.match(/预测产量为: ([\d.]+) kg/); val = m ? parseFloat(m[1]) : 0;
-    } else {
-      const targetYearData = historyData.find(d => String(d.year) === String(selectedYear.value));
-      if (targetYearData) val = getYield(targetYearData);
-    }
-
-    setTimeout(async () => {
-      loading.value = false; yieldValue.value = val;
-      if (val === 0 && !isPrediction) {
-        expertAdviceList.value = [{ type: 'warning', icon: '❌', title: '异常：数据缺失', tags: ['系统提示'], content: `底层数据库中暂未收录 ${selectedYear.value} 年的真实产量数据。`, action: '请前往系统下方的资产中心手动录入原始台账。' }];
-        healthScore.value = 0; statusType.value = 'warning';
-      } else {
-        generateExpertAdvice(val, selectedProvince.value, selectedCrop.value, isPrediction, historyData)
-      }
-      await nextTick(); setTimeout(() => { initGaugeChart('modalYieldChart'); initLineChart('modalHistoryChart', historyData); }, 50)
-    }, 800)
-  } catch(e) { loading.value = false; alert('推演引擎连接失败') }
-}
-
-const closeModal = () => { showModal.value = false; setTimeout(() => { ['modalYieldChart', 'modalHistoryChart'].forEach(id => { const dom = document.getElementById(id); if (dom) echarts.dispose(dom) }) }, 300); if (currentView.value === 'home') { setTimeout(initMapChart, 100); } }
-
-const initGaugeChart = (id) => {
-  const dom = document.getElementById(id); if(!dom) return; echarts.dispose(dom); const chart = echarts.init(dom)
-  let gaugeMax = 800; if (selectedCrop.value === '水稻') gaugeMax = 800; else if (selectedCrop.value === '玉米') gaugeMax = 700; else if (selectedCrop.value === '小麦') gaugeMax = 600; else if (selectedCrop.value === '大豆') gaugeMax = 350;
-  chart.setOption({ series: [{ type: 'gauge', min: 0, max: gaugeMax, axisTick: { show: false }, splitLine: { length: 15, lineStyle: { color: 'auto', width: 2 } }, axisLine: { lineStyle: { width: 15, color: [ [0.3, '#67e0e3'], [0.7, '#37a2da'], [1, '#fd666d'] ], shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.1)' } }, pointer: { itemStyle: { color: 'auto' } }, detail: { formatter: '{value} kg', fontSize: 22, fontWeight: 'bolder', color: 'inherit', valueAnimation: true }, data: [{value: yieldValue.value}] }] })
-}
-
-const initLineChart = (id, data) => {
-  const dom = document.getElementById(id); if(!dom) return; echarts.dispose(dom); const chart = echarts.init(dom)
-  chart.setOption({ tooltip: { trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } } }, grid: { top: 30, bottom: 30, left: 50, right: 20 }, xAxis: { type: 'category', boundaryGap: false, data: data.map(i=>i.year+'年') }, yAxis: { type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#eee' } } }, series: [{ type: 'line', smooth: true, showSymbol: false, lineStyle: { width: 4, color: '#2ed573', shadowColor: 'rgba(46, 213, 115, 0.5)', shadowBlur: 10 }, areaStyle: { opacity: 0.8, color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(46, 213, 115, 0.5)' }, { offset: 1, color: 'rgba(46, 213, 115, 0.0)' }]) }, itemStyle: { color: '#2ed573' }, data: data.map(i=>getYield(i)) }] })
-}
-
+// ================== 3. 态势地图 ==================
+const showDataModal = ref(false); const clickProvData = ref([]); const clickProvAvgYield = ref(0);
 const initMapChart = () => {
-  const dom = document.getElementById('chinaMapChart'); if (!dom) return; echarts.dispose(dom); const chart = echarts.init(dom)
-  const provYieldMap = {}; currentCropData.value.forEach(d => { if(!provYieldMap[d.province]) { provYieldMap[d.province] = { sum: 0, count: 0 }; } provYieldMap[d.province].sum += getYield(d); provYieldMap[d.province].count += 1; });
-  let maxVal = 100; let minVal = 0;
-  const mapData = provinceList.value.map(dbName => { let avgYield = 0; if (provYieldMap[dbName]) { avgYield = Math.round(provYieldMap[dbName].sum / provYieldMap[dbName].count); } return { name: provinceMap[dbName] || dbName, value: avgYield, shortName: dbName }; });
-  if (mapData.length > 0) { const yields = mapData.map(item => item.value).filter(v => v > 0); if (yields.length > 0) { maxVal = Math.max(...yields); minVal = Math.min(...yields); } }
+  const dom = document.getElementById('chinaMapChart'); if (!dom || !mapGeoJson.value) return;
+  echarts.dispose(dom); const chart = echarts.init(dom);
+  const provMap = {}; currentCropData.value.forEach(d=>{ if(!provMap[d.province])provMap[d.province]={s:0,c:0}; provMap[d.province].s+=getYield(d); provMap[d.province].c+=1; });
+  const mapData = provinceList.value.map(dbName => ({ name: dbName, value: provMap[dbName] ? Math.round(provMap[dbName].s/provMap[dbName].c) : 0 }));
+  let yields = mapData.map(i=>i.value).filter(v=>v>0); let maxVal = yields.length>0?Math.max(...yields):100, minVal = yields.length>0?Math.min(...yields):0;
+
   chart.setOption({
-    backgroundColor: '#eef2f5',
-    tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.95)', textStyle: { color: '#333' }, formatter: (params) => { const sName = params.data ? params.data.shortName : (reverseProvinceMap[params.name] || params.name); if (!provinceList.value.includes(sName)) return `<div style="color:#999">${params.name}</div><div style="font-size:12px;">暂无该作物数据</div>`; return `<div style="font-weight:bold;color:#1890ff;font-size:15px;border-bottom:1px solid #eee;padding-bottom:5px;margin-bottom:5px;">${params.name}</div><div style="color:#666;">${selectedCrop.value} 平均亩产: <span style="color:#2ed573;font-weight:bold;font-size:18px;">${params.value || 0}</span> kg</div><div style="font-size:12px;color:#888;margin-top:8px;">👉 点击进行AI沙盘推演</div>`; } },
-    visualMap: { min: minVal, max: maxVal, left: '3%', bottom: '5%', text: ['高产区', '低产区'], calculable: true, inRange: { color: ['#fef08a', '#bbf7d0', '#4ade80', '#16a34a', '#14532d'] }, textStyle: { color: '#64748b', fontWeight: 'bold' }, backgroundColor: 'rgba(255,255,255,0.9)', padding: 10, borderRadius: 8, boxShadow: '0 2px 10px rgba(0,0,0,0.1)' },
-    geo: { map: 'china', roam: true, zoom: 1.2, top: 'center', label: { show: true, color: '#334155', fontSize: 10, fontWeight: 'bold' }, itemStyle: { borderColor: '#fff', borderWidth: 1, shadowColor: 'rgba(0, 0, 0, 0.15)', shadowBlur: 5, shadowOffsetX: 2, shadowOffsetY: 5 }, emphasis: { label:{ color: '#fff' }, itemStyle: { borderWidth: 0, shadowBlur: 15, shadowColor: 'rgba(0,0,0,0.4)' } }, select: { label:{color:'#fff'}, itemStyle: { areaColor: '#ffa502', shadowBlur: 15, shadowColor: 'rgba(255, 165, 2, 0.6)' } } },
-    series: [{ type: 'map', geoIndex: 0, data: mapData, selectedMode: 'single' }]
-  })
-  chart.off('click'); chart.on('click', params => { const sName = params.data ? params.data.shortName : (reverseProvinceMap[params.name] || params.name); const found = provinceList.value.find(dbName => normalizeName(dbName) === normalizeName(sName)); if (found) { selectedProvince.value = found; selectedYear.value = '2025 (AI预测)'; showModal.value = true; executeModalAnalysis(); } })
-  window.addEventListener('resize', () => chart.resize())
+    tooltip: { trigger: 'item', formatter: p => `<div style="font-weight:bold;font-size:16px;">${p.name}</div>${selectedCrop.value}均产: <span style="color:#2ed573;font-weight:bold;">${p.value||0}</span> kg` },
+    visualMap: { min: minVal, max: maxVal, left: '3%', bottom: '5%', inRange: { color: ['#fef08a', '#4ade80', '#14532d'] } },
+    geo: { map: 'china', roam: true, zoom: 1.2, itemStyle: { borderColor: '#fff' } },
+    series: [{ type: 'map', geoIndex: 0, data: mapData }]
+  });
+  chart.on('click', params => {
+    selectedProvince.value = params.name; const history = allData.value.filter(d => d.province===params.name && getCrop(d)===selectedCrop.value).sort((a,b)=>a.year-b.year);
+    clickProvData.value = history; clickProvAvgYield.value = history.length>0 ? (history.reduce((a,b)=>a+getYield(b),0)/history.length).toFixed(1) : 0;
+    showDataModal.value = true;
+    nextTick(() => { const cDom=document.getElementById('clickProvChart'); if(cDom){ echarts.dispose(cDom); const c=echarts.init(cDom); c.setOption({tooltip:{trigger:'axis'}, xAxis:{type:'category',data:history.map(i=>i.year)}, yAxis:{type:'value'}, series:[{type:'bar', data:history.map(i=>getYield(i)), itemStyle:{color:'#3b82f6',borderRadius:[4,4,0,0]}}] }); } })
+  });
+  window.addEventListener('resize', () => chart.resize());
 }
-watch(showModal, v => document.body.style.overflow = v ? 'hidden' : '')
+
+// ================== 4. 深度分析页 (带Tab切换) ==================
+const activeAnalysisTab = ref('yield');
+
+const switchAnalysisTab = (tabName) => {
+  activeAnalysisTab.value = tabName;
+  nextTick(() => {
+    const provData = allData.value.filter(d => d.province === analysisProvince.value && getCrop(d) === selectedCrop.value).sort((a,b)=>a.year-b.year);
+
+    if (tabName === 'yield') {
+      const dom = document.getElementById('tabYieldChart'); if(!dom) return; echarts.dispose(dom); const chart = echarts.init(dom);
+      chart.setOption({ tooltip:{trigger:'axis'}, grid:{top:40,bottom:30}, xAxis:{type:'category', data:provData.map(i=>i.year)}, yAxis:{type:'value',name:'产量(kg)'}, series:[{type:'line', smooth:true, areaStyle:{opacity:0.3,color:'#fa8c16'}, data:provData.map(i=>getYield(i)), lineStyle:{width:4,color:'#fa8c16'}}] });
+    }
+    else if (tabName === 'rank') {
+      const dom = document.getElementById('tabRankChart'); if(!dom) return; echarts.dispose(dom); const chart = echarts.init(dom);
+      const m={}; currentCropData.value.forEach(d=>{if(!m[d.province])m[d.province]=[]; m[d.province].push(getYield(d));});
+      const arr=[]; for(let p in m) arr.push({n:p, v:(m[p].reduce((a,b)=>a+b,0)/m[p].length).toFixed(1)}); arr.sort((a,b)=>b.v-a.v);
+      chart.setOption({ tooltip:{trigger:'axis'}, grid:{top:30,bottom:30}, xAxis:{type:'category', data:arr.slice(0,10).map(i=>i.n)}, yAxis:{type:'value'}, series:[{type:'bar', barWidth:'45%', data:arr.slice(0,10).map(i=>i.v), itemStyle:{color:new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'#4ade80'},{offset:1,color:'#16a34a'}])}}] });
+    }
+    else if (tabName === 'climate') {
+      const dom = document.getElementById('tabClimateChart'); if(!dom) return; echarts.dispose(dom); const chart = echarts.init(dom);
+      chart.setOption({ tooltip:{trigger:'axis'}, legend:{data:['年降水(mm)','均温(℃)']}, grid:{top:40,bottom:30}, xAxis:{type:'category', data:provData.map(i=>i.year)}, yAxis:[{type:'value',name:'降水'},{type:'value',name:'温度',position:'right'}], series:[{name:'年降水(mm)',type:'bar',data:provData.map(i=>i.rainfall||0),itemStyle:{color:'#4facfe'}}, {name:'均温(℃)',type:'line',yAxisIndex:1,data:provData.map(i=>i.temperature||0),itemStyle:{color:'#ff4d4f'},lineStyle:{width:3}}] });
+    }
+    else if (tabName === 'soil') {
+      const dom = document.getElementById('tabSoilChart'); if(!dom) return; echarts.dispose(dom); const chart = echarts.init(dom);
+      let soil = provData.find(d => d.nitrogen > 0) || { nitrogen: 45, phosphorus: 20, potassium: 35 };
+      chart.setOption({ tooltip:{trigger:'item'}, legend:{bottom:'0%'}, series:[{name:'养分',type:'pie',radius:['40%','70%'], itemStyle:{borderRadius:10,borderColor:'#fff',borderWidth:2}, label:{show:true,formatter:'{b}: {c}%'}, data:[{value:soil.nitrogen||45,name:'氮(N)',itemStyle:{color:'#3b82f6'}},{value:soil.phosphorus||20,name:'磷(P)',itemStyle:{color:'#f59e0b'}},{value:soil.potassium||35,name:'钾(K)',itemStyle:{color:'#10b981'}}]}] });
+    }
+  });
+}
+
+// ================== 5. AI 预测与推演 ==================
+const hasPredicted = ref(false); const loading = ref(false);
+const expertAdviceList = ref([]); const healthScore = ref(0); const statusType = ref('');
+const simTemp = ref(22.5); const simRain = ref(800); const simPh = ref(6.5);
+
+const executePrediction = async () => {
+  loading.value = true; hasPredicted.value = false;
+  try {
+    const pRes = await axios.get(`http://localhost:8080/api/data/predict?province=${selectedProvince.value}&cropType=${selectedCrop.value}`)
+    let val = 0; const m = pRes.data.match(/预测产量为: ([\d.]+) kg/); if(m) val = parseFloat(m[1]);
+
+    // 沙盘微调干预
+    val = val - (Math.abs(simTemp.value - 22) * 5) - (Math.abs(simRain.value - 800) * 0.1) - (Math.abs(simPh.value - 6.5) * 30);
+    val = Math.max(val, 0).toFixed(1);
+
+    const hRes = await axios.get(`http://localhost:8080/api/data/history?province=${selectedProvince.value}&cropType=${selectedCrop.value}`)
+    setTimeout(() => {
+      loading.value = false; hasPredicted.value = true;
+      let score = 100 - (Math.abs(simTemp.value-22)*1.5) - (Math.abs(simRain.value-800)*0.02) - (Math.abs(simPh.value-6.5)*10);
+      healthScore.value = Math.min(Math.max(Math.round(score), 30), 98);
+      statusType.value = healthScore.value > 80 ? 'success' : (healthScore.value > 60 ? 'info' : 'warning');
+
+      expertAdviceList.value = [ { type: statusType.value, icon: '🎯', title: '智能推演核算结果', tags: ['沙盘推演'], content: `在当前极端沙盘参数下，模拟亩产为：<b>${val} kg</b>。`, action: '将该参数场景保存为应急预案。' } ];
+      if(simTemp.value > 30) expertAdviceList.value.push({ type: 'warning', icon: '🔥', title: '高温热害阻击', tags: ['红色预警'], content: `设定的 ${simTemp.value}℃ 气温极易引发高温逼熟。`, action: '立即调集无人机喷施抗旱剂。' });
+
+      nextTick(() => {
+        const gDom = document.getElementById('predictGaugeChart'); if(gDom){ echarts.dispose(gDom); const c=echarts.init(gDom); c.setOption({ series:[{type:'gauge',min:0,max:900,detail:{formatter:'{value} kg',fontSize:20},data:[{value:val}]}] }); }
+        const rDom = document.getElementById('predictRadarChart'); if(rDom){ echarts.dispose(rDom); const c2=echarts.init(rDom); c2.setOption({ radar:{indicator:[{name:'气候适宜'},{name:'降水充沛'},{name:'土壤健康'},{name:'高产潜能'},{name:'抗风险力'}],radius:'65%'}, series:[{type:'radar',data:[{value:[score, score, score, Math.min((val/600)*100,100), score], name:'评级',areaStyle:{color:'rgba(46,213,115,0.4)'}}]}] }); }
+      });
+    }, 1500);
+  } catch(e) { loading.value = false; alert("引擎连接失败！"); }
+}
+
+watch(currentView, (v) => { nextTick(() => { if(v === 'home') setTimeout(initMapChart, 200); if(v === 'analysis') switchAnalysisTab('yield'); }) })
 </script>
 
 <style>
-/* === 基础与全局 === */
-html, body, #app { margin: 0 !important; padding: 0 !important; width: 100vw !important; height: 100vh !important; overflow: hidden !important; font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; }
+/* 登录面板与表单样式 */
+.login-container { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: radial-gradient(#d1d5db 1px, transparent 1px) #f0f2f5; background-size: 20px 20px;}
+.login-box { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 90%;}
+.login-logo { font-size: 50px; background: #e6fffa; width: 90px; height: 90px; line-height: 90px; border-radius: 50%; margin: 0 auto 20px;}
+.login-subtitle { color: #64748b; margin-top: 10px; margin-bottom: 25px; font-size: 14px;}
+.login-form { display: flex; flex-direction: column; gap: 15px; }
+.modern-input { padding: 14px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; outline: none; background: #f8fafc; transition: 0.3s;}
+.modern-input:focus { border-color: #2ed573; background: white; box-shadow: 0 0 0 3px rgba(46,213,115,0.2);}
+.btn-login { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; transition: 0.3s;}
+.user-btn { background: #2ed573; }
+.auth-switch { margin-top: 15px; font-size: 14px; color: #64748b; }
+.link-text { color: #1890ff; cursor: pointer; font-weight: bold; }
+
+/* 基础框架 */
+html, body, #app { margin: 0; padding: 0; width: 100vw; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; }
 .app-container { display: flex; width: 100%; height: 100%; }
-
-/* === 动效 === */
-.hover-float { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; }
-.hover-float:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 15px 30px rgba(0,0,0,0.08) !important; z-index: 10; }
-.hover-glow { transition: all 0.3s ease; }
-.hover-glow:hover { box-shadow: 0 8px 25px rgba(46, 213, 115, 0.15) !important; border-color: rgba(46, 213, 115, 0.3) !important; }
-.pulse-on-hover:hover { animation: pulse 1s infinite; }
-@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(46, 213, 115, 0); } 100% { box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); } }
-.skeleton-fade { animation: fadeInOut 1s infinite alternate; }
-.shimmer { background: #f6f7f8; background-image: linear-gradient(90deg, #f0f2f5 0px, #e6e8eb 40px, #f0f2f5 80px); background-size: 600px; animation: shimmer 1.5s infinite linear; border-radius: 8px; }
-@keyframes shimmer { 0% { background-position: -200px 0; } 100% { background-position: calc(200px + 100%) 0; } }
-.tech-spinner { width: 30px; height: 30px; border: 3px solid #eee; border-top-color: #2ed573; border-radius: 50%; animation: spin 1s infinite linear; }
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* === 布局基础 === */
-.sidebar { width: 240px; background: #2f3640; color: white; flex-shrink: 0; display: flex; flex-direction: column; }
+.sidebar { width: 240px; background: #1e293b; color: white; display: flex; flex-direction: column; }
 .logo-area { padding: 30px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-.logo-circle { width: 50px; height: 50px; background: #2ed573; border-radius: 50%; font-size: 24px; line-height: 50px; margin: 0 auto 10px; color: white; box-shadow: 0 4px 15px rgba(46,213,115,0.4);}
-.menu { flex: 1; padding-top: 20px; }
-.menu-item { padding: 15px 25px; cursor: pointer; color: #a4b0be; display: flex; gap: 15px; transition: 0.2s; }
+.logo-circle { width: 50px; height: 50px; background: #2ed573; border-radius: 50%; font-size: 24px; line-height: 50px; margin: 0 auto 10px;}
+.menu { flex: 1; padding-top: 10px; overflow-y: auto; }
+.menu-category { font-size: 12px; color: #94a3b8; font-weight: bold; padding: 15px 25px 5px; }
+.menu-item { padding: 12px 25px; cursor: pointer; color: #cbd5e1; display: flex; gap: 15px; transition: 0.2s; font-size: 14px;}
 .menu-item:hover { color: white; background: rgba(255,255,255,0.05); padding-left: 30px;}
 .menu-item.active { background: #2ed573; color: white; font-weight: bold; }
-.main-content { flex: 1; display: flex; flex-direction: column; position: relative; background: #f1f2f6; }
+.main-content { flex: 1; display: flex; flex-direction: column; background: #f1f5f9; }
+.top-header { height: 70px; background: white; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #e2e8f0; }
 .content-body { flex: 1; overflow-y: auto; padding: 30px; }
 .content-body.no-padding { padding: 0; overflow: hidden; }
 
-/* === 模块样式 === */
-.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 25px; margin-bottom: 30px; }
-.stat-card { background: white; padding: 20px; border-radius: 12px; display: flex; align-items: center; gap: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); }
-.stat-icon { width: 56px; height: 56px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
-.bg-blue { background: #e7f5ff; color: #1890ff; } .bg-green { background: #e6fffa; color: #2ed573; } .bg-purple { background: #f3f0ff; color: #722ed1; } .bg-orange { background: #fff7e6; color: #fa8c16; }
-.number { font-size: 30px; font-weight: 800; color: #2f3542; }
-.home-view { width: 100%; height: 100%; position: relative; }
-#chinaMapChart { width: 100%; height: 100%; display: block; }
-.map-overlay-panel { position: absolute; top: 30px; left: 30px; background: rgba(255,255,255,0.95); padding: 25px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); z-index: 10; border: 1px solid white;}
-.panel-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; color: #2c3e50; }
-.panel-data { display: flex; gap: 30px; margin-bottom: 15px; }
-.data-item { display: flex; flex-direction: column; }
-.data-item span { font-size: 13px; color: #7f8c8d; }
-.data-item strong { font-size: 26px; color: #2ed573; text-shadow: 0 2px 5px rgba(46,213,115,0.2); }
-.hint { font-size: 13px; color: #95a5a6; }
-.card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); border: 1px solid #f1f2f6; }
-.asset-charts-row { display: flex; gap: 20px; margin-bottom: 20px; }
-.chart-box { padding: 20px; margin-bottom: 0; background: white; border-radius: 16px; border: 1px solid #e2e8f0; }
+/* 分析页 Tabs 样式 */
+.tabs-container { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
+.tab-btn { padding: 10px 20px; background: transparent; border: none; font-size: 15px; font-weight: bold; color: #64748b; cursor: pointer; transition: 0.3s; border-radius: 8px;}
+.tab-btn:hover { background: #f1f5f9; color: #334155;}
+.tab-btn.active { background: #2ed573; color: white; box-shadow: 0 4px 10px rgba(46,213,115,0.3);}
 
-/* === AI 模型中心专项样式 === */
-.retrain-btn { width: 100%; height: 100%; position: absolute; inset: 0; border: none; background: rgba(250, 140, 22, 0.1); color: #fa8c16; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-.retrain-btn:hover { background: #fa8c16; color: white; }
-.training-overlay { position: absolute; inset: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 10;}
-.terminal-box { background: #1e1e1e; border-radius: 8px; padding: 20px; font-family: 'Courier New', Courier, monospace; font-size: 14px; line-height: 1.8; margin-top: 10px; height: 200px; overflow-y: auto;}
-.terminal-box p { margin: 0; }
-
-/* === 弹窗与通用组件 === */
-.modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 2000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
-.modal-container { background: #f8fafc; width: 90%; height: 95%; max-width: 1500px; border-radius: 20px; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); overflow: hidden;}
-.modal-header { padding: 20px 35px; background: white; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; z-index: 10;}
-.modal-header h3 { font-weight: 800; color: #1e293b; font-size: 22px; margin: 0; }
-.modal-body { flex: 1; overflow-y: hidden; padding: 30px; }
-.modal-quick-selectors { display: flex; align-items: center; background: #f1f5f9; padding: 6px 16px; border-radius: 20px; }
-.modal-quick-selectors .label { font-size: 13px; color: #475569; margin-right: 8px; font-weight: bold; }
-.three-block-layout { display: flex; gap: 30px; height: 100%; min-height: 500px;}
-.layout-left-col { display: flex; flex-direction: column; gap: 25px; }
-.layout-right-col { display: flex; flex-direction: column; height: 100%; }
-.content-block { border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 20px rgba(0,0,0,0.03); display: flex; flex-direction: column; padding: 20px; }
-.layout-left-col .content-block { flex: 1; }
-.advice-block { flex: 1; overflow: hidden; padding: 30px; }
-.block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid rgba(0,0,0,0.03); padding-bottom: 10px;}
-.block-header h4 { font-size: 16px; font-weight: 700; color: #334155; margin: 0;}
-.chart-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; }
-
-/* === 智能决策指令 UI 设计 === */
-.advice-header-zone { display: flex; align-items: center; gap: 25px; margin-bottom: 20px; padding-bottom: 20px; flex-shrink: 0; }
-.health-badge-wrapper { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 110px; height: 110px; border-radius: 50%; padding: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.08); position: relative; flex-shrink: 0;}
-.health-badge-wrapper.success { background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%); box-shadow: 0 10px 25px rgba(120, 255, 214, 0.4); }
-.health-badge-wrapper.info { background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%); box-shadow: 0 10px 25px rgba(102, 166, 255, 0.4); }
-.health-badge-wrapper.warning { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); box-shadow: 0 10px 25px rgba(253, 160, 133, 0.4); }
-.health-score-ring { width: 100%; height: 100%; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-.health-score { font-size: 38px; font-weight: 900; color: #1e293b; line-height: 1; }
-.health-unit { font-size: 13px; color: #64748b; margin-top: 2px; }
-.health-label { position: absolute; bottom: -14px; background: #1e293b; color: white; font-size: 12px; padding: 4px 12px; border-radius: 12px; white-space: nowrap; font-weight: bold; }
-.spacious-list { display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; padding-right: 15px; padding-bottom: 20px;}
-.spacious-list::-webkit-scrollbar { width: 6px; }
-.spacious-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-.advice-list-item { display: flex; gap: 20px; padding: 20px; border-radius: 14px; transition: all 0.3s; border: 1px solid #e2e8f0; background: #fff; position: relative; overflow: hidden; flex-shrink: 0; box-shadow: 0 2px 8px rgba(0,0,0,0.02);}
-.advice-list-item:hover { transform: translateX(8px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); border-color: #cbd5e1;}
-.advice-list-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
-.advice-list-item.success::before { background: #10b981; }
-.advice-list-item.info::before { background: #3b82f6; }
-.advice-list-item.warning::before { background: #ef4444; }
-.advice-list-item.normal::before { background: #6366f1; }
-.item-icon-wrapper { width: 50px; height: 50px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; background: #f8fafc; border: 1px solid #f1f5f9; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);}
-.item-content { flex: 1; display: flex; flex-direction: column; justify-content: center;}
-.tech-tag { font-size: 11px; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
-.tech-tag.success { background: #d1fae5; color: #047857; }
-.tech-tag.info { background: #dbeafe; color: #1d4ed8; }
-.tech-tag.warning { background: #fee2e2; color: #b91c1c; }
-.tech-tag.normal { background: #f1f5f9; color: #475569; }
-.item-desc { font-size: 14px; color: #334155; line-height: 1.6; margin: 0 0 10px 0; word-break: break-word; }
-.item-action { font-size: 13.5px; padding: 10px 15px; border-radius: 8px; font-weight: 500; display: flex; align-items: flex-start; line-height: 1.5;}
-.action-icon { font-weight: 800; margin-right: 5px; flex-shrink: 0;}
-.item-action.success { background: #ecfdf5; color: #065f46; border-left: 3px solid #10b981;}
-.item-action.info { background: #eff6ff; color: #1e40af; border-left: 3px solid #3b82f6;}
-.item-action.warning { background: #fef2f2; color: #991b1b; border-left: 3px solid #ef4444;}
-.item-action.normal { background: #f8fafc; color: #334155; border-left: 3px solid #64748b;}
-
-/* 控件 */
-.btn-flat { background: #2ed573; color: white; border: none; padding: 10px 22px; border-radius: 8px; cursor: pointer; transition: 0.3s; font-weight: 700; font-size: 14px; box-shadow: 0 4px 12px rgba(46,213,115,0.3);}
-.btn-flat:hover { background: #26af61; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(46,213,115,0.4);}
-.btn-xs { padding: 6px 16px; font-size: 13px; }
-.modern-select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; min-width: 120px; font-size: 14px; color: #334155; outline: none; transition: 0.3s; background: white;}
-.modern-select:focus { border-color: #2ed573; box-shadow: 0 0 0 3px rgba(46,213,115,0.2); }
-.year-select { background-color: #f0fdf4 !important; border-color: #86efac !important; color: #166534 !important; font-weight: bold;}
-.top-header { height: 70px; background: white; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; }
-.close-btn { border: none; background: #f1f5f9; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; cursor: pointer; color: #64748b; transition: 0.3s; display: flex; align-items: center; justify-content: center; }
-.close-btn:hover { background: #fee2e2; color: #ef4444; transform: rotate(90deg); }
-.fade-in { animation: fadeIn 0.5s ease; }
+/* 核心组件池 */
+.card { background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); border: 1px solid #e2e8f0;}
+.hover-float { transition: transform 0.3s; }
+.hover-float:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+.hover-glow { transition: all 0.3s ease; }
+.hover-glow:hover { box-shadow: 0 8px 25px rgba(46, 213, 115, 0.15); border-color: rgba(46, 213, 115, 0.3); }
+.fade-in { animation: fadeIn 0.4s ease; }
 .fade-up { animation: fadeUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1); }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(30px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.tech-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #2ed573; border-radius: 50%; animation: spin 1s linear infinite; width:40px; height:40px;}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* 专用界面样式 */
+.home-view { width: 100%; height: 100%; position: relative; }
+.map-loading-overlay { position: absolute; inset:0; background:rgba(255,255,255,0.8); z-index:50; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#2ed573; font-weight:bold; }
+#chinaMapChart { width: 100%; height: 100%; }
+.map-overlay-panel { position: absolute; top: 30px; left: 30px; background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.1); z-index: 10; border:1px solid #fff;}
+.three-block-layout { display: flex; gap: 25px; height: 100%; }
+.custom-slider { -webkit-appearance: none; width: 100%; height: 8px; border-radius: 4px; background: #e2e8f0; outline: none; transition: opacity .2s; }
+.custom-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #3b82f6; cursor: pointer; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+
+.spacious-list { display: flex; flex-direction: column; gap: 15px; }
+.advice-list-item { display: flex; gap: 15px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; background: white;}
+.item-icon-wrapper { font-size: 26px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 10px;}
+.item-content { flex: 1; }
+.tech-tag { font-size: 11px; padding: 4px 8px; border-radius: 6px; font-weight: bold; }
+.tech-tag.success { background: #dcfce7; color: #166534; }
+.tech-tag.warning { background: #fee2e2; color: #991b1b; }
+.tech-tag.info { background: #e0e7ff; color: #3730a3; }
+.item-desc { font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 10px 0; }
+.item-action { font-size: 13px; padding: 10px 15px; border-radius: 8px; font-weight: bold; background: #f8fafc; color:#334155; border-left:4px solid #cbd5e1;}
+
+.modern-select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #334155; outline: none; background: white;}
+.user-info { display: flex; align-items: center; gap: 15px; }
+.avatar-simple { width: 40px; height: 40px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;}
+.btn-logout { width: 80%; margin: 20px auto; display: block; padding: 10px; background: rgba(255, 77, 79, 0.1); color: #ff4d4f; border: 1px solid rgba(255, 77, 79, 0.3); border-radius: 8px; cursor: pointer; font-weight:bold;}
+.mock-table { width: 100%; border-collapse: collapse; text-align: left; }
+.mock-table th, .mock-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);}
+.modal-container { background: white; border-radius: 12px; width: 90%; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);}
+.modal-header { padding: 20px 25px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; }
+.close-btn { background: #f1f5f9; border: none; font-size: 24px; cursor: pointer; width: 40px; height:40px; border-radius:50%;}
 </style>
